@@ -4,7 +4,7 @@ setup(
     name='tierpsytools',
     version='0.1dev',
     packages=['tierpsytools',],
-    long_description=open('README.txt').read(),
+    long_description=open('README.md').read(),
     include_package_data=True
 )
 
