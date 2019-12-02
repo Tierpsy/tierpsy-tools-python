@@ -7,20 +7,23 @@ Created on Thu Nov 21 12:25:41 2019
 """
 import pandas as pd
 from pathlib import Path
-import re
+from tierpsytools.hydra.hydra_helper import exract_randomized_by,rename_out_meta_cols
 import warnings
 import numpy as np
 
 #%%
-def merge_robot_metadata (sourceplates_file,saveto=None,del_if_exists=False):
+def merge_robot_metadata (sourceplates_file,randomized_by='column',saveto=None,del_if_exists=False):
     """
     Function that imports the robot runlog and the associated source plates 
     for a given day of experiments and uses them to compile information of 
     drugs in the destination plates
-    Input:
-        robot_directory - path to robot outputs
-        source_plates - path to the source plates file `YYYYMMDD_sourceplates.csv`
-    Output:
+    param:
+        sourceplates_file: path to sourceplates_file `YYYYMMDD_sourceplates.csv`
+        randomized_by: How did the robot randomize the wells from the source plate to the destination plates?
+            options: 'column'/'source_column' = shuffled columns,
+            'row'/'source_row' = shuffled rows, 'well'/'source_well' = shuffled well-by-well
+            The parameter randomized_by is expected to be a field in the sourceplates file.
+    return:
         robot related metadata for the given day of experiments as dataframe
     """
     if saveto is None:
@@ -37,7 +40,7 @@ def merge_robot_metadata (sourceplates_file,saveto=None,del_if_exists=False):
             return
     
     # required fields in sourceplates file
-    sourceplate_cols = ['source_plate_id','robot_runlog_filename','source_robotslot']
+    sourceplate_cols = ['source_plate_id','robot_runlog_filename','source_robotslot'].extend([randomized_by])
     
     # import the sourceplates
     sourceplates = pd.read_csv(sourceplates_file,index_col=False)
@@ -69,24 +72,25 @@ def merge_robot_metadata (sourceplates_file,saveto=None,del_if_exists=False):
         robotlog = robotlog[robotlog['source_slot'].isin(source['source_robotslot'])]
         # assign robot runlog id
         robotlog['robot_runlog_id'] = n_log+1
-        # extract the column number from the well number for mapping (as replicates are by column)
-        robotlog['column'] = [int(re.findall(r'\d+', r['source_well'])[0]) for i,r in robotlog.iterrows()]
+        # extract the column number or the row number from the well number for mapping
+        # if the robot randomized based on columns or rows
+        robotlog = exract_randomized_by(robotlog,randomized_by)
         # add source_plate_id based on unique source_plate_id - source_slot mapping obtained from sourceplates file
         robotlog['source_plate_id'] = robotlog['source_slot'].map(dict(source_map.values))
         
-        # merge all sourceplate data with robot runlog data based on source_plate_id and column
-        out_meta = pd.merge(source,robotlog,how='outer',left_on=['source_plate_id','column'],right_on=['source_plate_id','column'])
+        # merge all sourceplate data with robot runlog data based on source_plate_id and randomized_by
+        out_meta = pd.merge(source,robotlog,how='outer',left_on=['source_plate_id',randomized_by],right_on=['source_plate_id',randomized_by])
         # get unique imaging_plate_id
         out_meta['imaging_plate_id'] = out_meta[['source_plate_id','destination_slot']].apply(lambda x: 'rr{0}_sp{1}_ds{2}'.format(n_log+1,*x),axis=1)
         
         # clean up and rename columns in out_meta
         # - sort rows for readability
-        out_meta = out_meta.sort_values(by=['source_plate_id','destination_slot', 'column']).reset_index(drop=True)
+        out_meta = out_meta.sort_values(by=['source_plate_id','destination_slot', randomized_by]).reset_index(drop=True)
         # - drop duplicate source_slot info
         assert np.all(out_meta['source_slot']==out_meta['source_robotslot'])
         out_meta = out_meta.drop(labels='source_slot',axis=1)
         # - rename column field for interpretability
-        out_meta = out_meta.rename(columns={'column':'source_plate_column'})
+        out_meta = rename_out_meta_cols(out_meta)
         # - rearrange columns for readability
         leading_cols = ['imaging_plate_id','source_plate_id','destination_slot']
         end_cols = ['robot_runlog_id','robot_runlog_filename']
@@ -290,7 +294,7 @@ def concatenate_days_metadata(aux_root_dir,list_days=None,saveto=None):
 if __name__ == '__main__':
     # Example 1:
     # Input
-    day_root_dir = Path('/Volumes/behavgenom$/Ida/Data/Hydra/PilotDrugExps/AuxiliaryFiles/20191108_tierpsytools_dev')
+    day_root_dir = Path('/Users/em812/Data/Hydra_pilot/AuxiliaryFiles/20191108_tierpsytools_dev')
     sourceplate_file = day_root_dir / '20191107_sourceplates.csv'
     manual_meta_file = day_root_dir / '20191108_manual_metadata.csv'
     
