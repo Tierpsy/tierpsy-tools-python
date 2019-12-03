@@ -7,23 +7,21 @@ Created on Thu Nov 21 12:25:41 2019
 """
 import pandas as pd
 from pathlib import Path
-from tierpsytools.hydra.hydra_helper import exract_randomized_by,rename_out_meta_cols
+import re
 import warnings
 import numpy as np
+import itertools
 
 #%%
-def merge_robot_metadata (sourceplates_file,randomized_by='column',saveto=None,del_if_exists=False):
+def merge_robot_metadata (sourceplates_file,saveto=None,del_if_exists=False):
     """
     Function that imports the robot runlog and the associated source plates 
     for a given day of experiments and uses them to compile information of 
     drugs in the destination plates
-    param:
-        sourceplates_file: path to sourceplates_file `YYYYMMDD_sourceplates.csv`
-        randomized_by: How did the robot randomize the wells from the source plate to the destination plates?
-            options: 'column'/'source_column' = shuffled columns,
-            'row'/'source_row' = shuffled rows, 'well'/'source_well' = shuffled well-by-well
-            The parameter randomized_by is expected to be a field in the sourceplates file.
-    return:
+    Input:
+        robot_directory - path to robot outputs
+        source_plates - path to the source plates file `YYYYMMDD_sourceplates.csv`
+    Output:
         robot related metadata for the given day of experiments as dataframe
     """
     if saveto is None:
@@ -40,7 +38,7 @@ def merge_robot_metadata (sourceplates_file,randomized_by='column',saveto=None,d
             return
     
     # required fields in sourceplates file
-    sourceplate_cols = ['source_plate_id','robot_runlog_filename','source_robotslot'].extend([randomized_by])
+    sourceplate_cols = ['source_plate_id','robot_runlog_filename','source_robotslot']
     
     # import the sourceplates
     sourceplates = pd.read_csv(sourceplates_file,index_col=False)
@@ -72,25 +70,24 @@ def merge_robot_metadata (sourceplates_file,randomized_by='column',saveto=None,d
         robotlog = robotlog[robotlog['source_slot'].isin(source['source_robotslot'])]
         # assign robot runlog id
         robotlog['robot_runlog_id'] = n_log+1
-        # extract the column number or the row number from the well number for mapping
-        # if the robot randomized based on columns or rows
-        robotlog = exract_randomized_by(robotlog,randomized_by)
+        # extract the column number from the well number for mapping (as replicates are by column)
+        robotlog['column'] = [int(re.findall(r'\d+', r['source_well'])[0]) for i,r in robotlog.iterrows()]
         # add source_plate_id based on unique source_plate_id - source_slot mapping obtained from sourceplates file
         robotlog['source_plate_id'] = robotlog['source_slot'].map(dict(source_map.values))
         
-        # merge all sourceplate data with robot runlog data based on source_plate_id and randomized_by
-        out_meta = pd.merge(source,robotlog,how='outer',left_on=['source_plate_id',randomized_by],right_on=['source_plate_id',randomized_by])
+        # merge all sourceplate data with robot runlog data based on source_plate_id and column
+        out_meta = pd.merge(source,robotlog,how='outer',left_on=['source_plate_id','column'],right_on=['source_plate_id','column'])
         # get unique imaging_plate_id
         out_meta['imaging_plate_id'] = out_meta[['source_plate_id','destination_slot']].apply(lambda x: 'rr{0}_sp{1}_ds{2}'.format(n_log+1,*x),axis=1)
         
         # clean up and rename columns in out_meta
         # - sort rows for readability
-        out_meta = out_meta.sort_values(by=['source_plate_id','destination_slot', randomized_by]).reset_index(drop=True)
+        out_meta = out_meta.sort_values(by=['source_plate_id','destination_slot', 'column']).reset_index(drop=True)
         # - drop duplicate source_slot info
         assert np.all(out_meta['source_slot']==out_meta['source_robotslot'])
         out_meta = out_meta.drop(labels='source_slot',axis=1)
         # - rename column field for interpretability
-        out_meta = rename_out_meta_cols(out_meta)
+        out_meta = out_meta.rename(columns={'column':'source_plate_column'})
         # - rearrange columns for readability
         leading_cols = ['imaging_plate_id','source_plate_id','destination_slot']
         end_cols = ['robot_runlog_id','robot_runlog_filename']
@@ -106,6 +103,76 @@ def merge_robot_metadata (sourceplates_file,randomized_by='column',saveto=None,d
         robot_metadata.to_csv(saveto,index=None)
         
     return robot_metadata
+
+#%% populate 96 well plates for tracking experiment where plates have been filled with different strains of food or worms
+
+def populate_96WPs(source_plates, entire_rows=True, saveto= None, del_if_exists = False):
+    """ Input:
+        source_plates - path for YYYYMMDD_sourceplates.csv file
+        
+        Output:
+        plate_metadata - one line per well; can be used in get_day_metadata function to compile with manual metadata
+            """
+    if saveto is None:
+        date = source_plates.stem.split('_')[0]
+        saveto = Path(source_plates).parent / (date+'_plate_metadata.csv')
+        
+    # check if file exists
+    if (saveto is not False) and (saveto.exists()):
+        if del_if_exists:
+            warnings.warn('Plate metadata file {} already exists. File will be overwritten.'.format(saveto))
+            saveto.unlink()
+        else:
+            warnings.warn('Plate metadata file {} already exists. Nothing to do here. If you want to recompile the day metadata, rename or delete the exisiting file.'.format(saveto))
+            return 
+    
+    #parameters for the 96WPs    
+    n_columns= 12
+    column_names = np.arange(1,n_columns+1)
+    row_names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+    well_names = list(itertools.product(row_names, column_names))
+    
+    #import manual_metadata and source plates
+#    manualDF = pd.read_csv(manual_metadata)
+    sourceplatesDF = pd.read_csv(source_plates)
+    
+    #extract out the start and end rows and columns
+    sourceplatesDF['start_row'] = [re.findall(r"[A-Z]", r.start_well)[0] for i,r in sourceplatesDF.iterrows()]
+    sourceplatesDF['end_row'] = [re.findall(r"[A-Z]", r.end_well)[0] for i,r in sourceplatesDF.iterrows()]
+    sourceplatesDF['start_column']=[re.findall(r"(\d{1,2})", r.start_well)[0] for i,r in sourceplatesDF.iterrows()]
+    sourceplatesDF['end_column'] = [re.findall(r"(\d{1,2})", r.end_well)[0] for i,r in sourceplatesDF.iterrows()]
+   
+    #create 96WP template to fill up
+    plate_template = pd.DataFrame()
+    plate_template['imaging_plate_row'] = [i[0] for i in well_names]
+    plate_template['imaging_plate_column'] = [i[1] for i in well_names]
+    plate_template['well_name'] = [i[0] + str(i[1]) for i in well_names]
+    
+    if entire_rows:
+        #populate the dataframe
+        plate_metadata=[]
+        for i,r in sourceplatesDF.iterrows():
+            _section = (plate_template[(r.start_row<=plate_template.imaging_plate_row)&
+                                       (plate_template.imaging_plate_row<=r.end_row)]).reset_index(drop=True)
+            _details = pd.concat(_section.shape[0]*[r.to_frame().transpose()]).reset_index(drop=True)
+            plate_metadata.append(pd.concat([_section,
+                                             _details],axis=1,sort=True))
+        
+        plate_metadata = pd.concat(plate_metadata)
+        
+#        day_metadata = pd.merge(manualDF,
+#                               day_metadata,
+#                               how='outer',
+#                               on= merge_col)
+        
+        plate_metadata.to_csv(saveto, index=False)
+        
+        return plate_metadata
+    
+    else:
+        print ('cannot use this function for generating the metadata; fills entire rows only')
+        return
+    
 
 
 #%%
@@ -133,7 +200,9 @@ def get_camera_serial(metadata,n_wells=96):
     WELL2CH = pd.concat(WELL2CH,axis=0)
     
     WELL2CAM = pd.merge(CAM2CH_df,WELL2CH,how='outer',on='channel').sort_values(by=['rig','channel','well_name'])
+    WELL2CAM= WELL2CAM[WELL2CAM['rig'].isin(metadata['instrument_name'].unique())]
     WELL2CAM = WELL2CAM.rename(columns={'rig':'instrument_name'})
+    
 
     out_metadata = pd.merge(metadata,WELL2CAM[['instrument_name','well_name','camera_serial']],how='outer',left_on=['instrument_name','well_name'],right_on=['instrument_name','well_name'])
     assert out_metadata.shape[0] == metadata.shape[0]
@@ -209,7 +278,7 @@ def get_day_metadata(imaging_plate_metadata, manual_metadata_file, merge_on=['im
         saveto: csv file path to save the day metadata in (if None, the metadata are saved in the same folder as the manual metadata)
     return:
         metadata: dataframe with day metadata
-    """
+    """    
     #find the date of the hydra experiments
     date_of_runs = manual_metadata_file.stem.split('_')[0]
     
@@ -228,7 +297,7 @@ def get_day_metadata(imaging_plate_metadata, manual_metadata_file, merge_on=['im
     manual_metadata = pd.read_csv(manual_metadata_file, index_col=False).assign(date_yyyymmdd=date_of_runs)
     
     # merge two dataframes
-    metadata = robot_metadata.merge(manual_metadata,how='inner', on=merge_on,indicator=False)
+    metadata = imaging_plate_metadata.merge(manual_metadata,how='inner', on=merge_on,indicator=False)
     
     # clean up and rearrange
     metadata.rename(columns={'destination_well':'well_name'}, inplace=True)
@@ -294,7 +363,7 @@ def concatenate_days_metadata(aux_root_dir,list_days=None,saveto=None):
 if __name__ == '__main__':
     # Example 1:
     # Input
-    day_root_dir = Path('/Users/em812/Data/Hydra_pilot/AuxiliaryFiles/20191108_tierpsytools_dev')
+    day_root_dir = Path('/Volumes/behavgenom$/Ida/Data/Hydra/PilotDrugExps/AuxiliaryFiles/20191108_tierpsytools_dev')
     sourceplate_file = day_root_dir / '20191107_sourceplates.csv'
     manual_meta_file = day_root_dir / '20191108_manual_metadata.csv'
     
@@ -327,4 +396,16 @@ if __name__ == '__main__':
             continue
         robot_metadata = merge_robot_metadata(source[0], saveto=False)
         day_metadata = get_day_metadata(robot_metadata, manual_meta[0], saveto=saveto[0])
+        
+    #%%Example 3:
+    day_root_dir = Path('/Volumes/behavgenom$/Ida/Data/Hydra/ICDbacteria/AuxiliaryFiles/20191122')
+    sourceplate_file = day_root_dir / '20191122_sourceplates.csv'
+    manual_meta_file = day_root_dir / '20191122_manual_metadata.csv'
+    metadata_file = day_root_dir.joinpath('20191122_day_metadata.csv')
+    
+    plate_metadata = populate_96WPs(sourceplate_file,
+                                  entire_rows=True,
+                                  saveto= None,
+                                  del_if_exists = False)
+    day_metadata = get_day_metadata(plate_metadata, manual_meta_file, saveto=metadata_file)
     
