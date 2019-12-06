@@ -9,8 +9,10 @@ import pandas as pd
 from pathlib import Path
 from tierpsytools.hydra.hydra_helper import exract_randomized_by
 from tierpsytools.hydra.hydra_helper import rename_out_meta_cols,explode_df
+import re
 import warnings
 import numpy as np
+import itertools
 
 #%%
 def merge_robot_metadata(
@@ -155,6 +157,97 @@ def merge_robot_metadata(
         
     return robot_metadata
 
+#%%
+
+def populate_96WPs(
+        source_plates, entire_rows=True, saveto= None, del_if_exists = False
+        ):
+    """ 
+    Populate 96 well plates for tracking experiment where plates have been 
+    filled with different strains of food or worms.
+    param:
+        source_plates: path for YYYYMMDD_sourceplates.csv file
+        
+    return:
+        plate_metadata: one line per well; can be used in get_day_metadata 
+            function to compile with manual metadata
+    """
+    if saveto is None:
+        date = source_plates.stem.split('_')[0]
+        saveto = Path(source_plates).parent / (date+'_plate_metadata.csv')
+        
+    # check if file exists
+    if (saveto is not False) and (saveto.exists()):
+        if del_if_exists:
+            warnings.warn('Plate metadata file {} already '.format(saveto)
+                          +'exists.File will be overwritten.')
+            saveto.unlink()
+        else:
+            warnings.warn('Plate metadata file {} already '.format(saveto)
+                          +'exists. Nothing to do here. If you want to '
+                          +'recompile the day metadata, rename or delete the '
+                          +'exisiting file.')
+            return 
+    
+    #parameters for the 96WPs    
+    n_columns= 12
+    column_names = np.arange(1,n_columns+1)
+    row_names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+    well_names = list(itertools.product(row_names, column_names))
+    
+    #import manual_metadata and source plates
+#    manualDF = pd.read_csv(manual_metadata)
+    sourceplatesDF = pd.read_csv(source_plates)
+    
+    #extract out the start and end rows and columns
+    sourceplatesDF['start_row'] = [re.findall(
+            r"[A-Z]", r.start_well)[0]
+            for i,r in sourceplatesDF.iterrows()]
+    sourceplatesDF['end_row'] = [re.findall(
+            r"[A-Z]", r.end_well)[0] 
+            for i,r in sourceplatesDF.iterrows()]
+    sourceplatesDF['start_column']=[re.findall(
+            r"(\d{1,2})", r.start_well)[0] 
+            for i,r in sourceplatesDF.iterrows()]
+    sourceplatesDF['end_column'] = [re.findall(
+            r"(\d{1,2})", r.end_well)[0] 
+            for i,r in sourceplatesDF.iterrows()]
+   
+    #create 96WP template to fill up
+    plate_template = pd.DataFrame()
+    plate_template['imaging_plate_row'] = [i[0] for i in well_names]
+    plate_template['imaging_plate_column'] = [i[1] for i in well_names]
+    plate_template['well_name'] = [i[0] + str(i[1]) for i in well_names]
+    
+    if not entire_rows:
+        print ('cannot use this function for generating the metadata;'+
+               ' fills entire rows only.')
+        return
+    
+    #populate the dataframe
+    plate_metadata=[]
+    for i,r in sourceplatesDF.iterrows():
+        _section = (
+                plate_template[
+                        (r.start_row<=plate_template.imaging_plate_row)
+                        & (plate_template.imaging_plate_row<=r.end_row)
+                        ]).reset_index(drop=True)
+        _details = pd.concat(
+                _section.shape[0]*[r.to_frame().transpose()]
+                ).reset_index(drop=True)
+        plate_metadata.append(
+                pd.concat([_section,_details],axis=1,sort=True))
+    
+    plate_metadata = pd.concat(plate_metadata)
+    
+#        day_metadata = pd.merge(manualDF,
+#                               day_metadata,
+#                               how='outer',
+#                               on= merge_col)
+    
+    plate_metadata.to_csv(saveto, index=False)
+    
+    return plate_metadata
 
 #%%
 # STEP 2
@@ -192,6 +285,7 @@ def get_camera_serial(
     
     # Rename 'rig' to 'instrument_name'
     WELL2CAM = WELL2CAM.rename(columns={'rig':'instrument_name'})
+    
 
     # Add camera number to metadata
     out_metadata = pd.merge(
@@ -329,7 +423,7 @@ def get_day_metadata(
                 the specific day, by replacing AuxiliaryFile by RawVideos.
     return:
         metadata: dataframe with day metadata
-    """
+    """    
     #find the date of the hydra experiments
     date_of_runs = manual_metadata_file.stem.split('_')[0]
         
@@ -502,4 +596,15 @@ if __name__ == '__main__':
         robot_metadata = merge_robot_metadata(source[0], saveto=False)
         day_metadata = get_day_metadata(
                 robot_metadata, manual_meta[0], saveto=saveto[0])
+        
+    #%%Example 3:
+    day_root_dir = Path('/Volumes/behavgenom$/Ida/Data/Hydra/ICDbacteria/AuxiliaryFiles/20191122')
+    sourceplate_file = day_root_dir / '20191122_sourceplates.csv'
+    manual_meta_file = day_root_dir / '20191122_manual_metadata.csv'
+    metadata_file = day_root_dir.joinpath('20191122_day_metadata.csv')
     
+    plate_metadata = populate_96WPs(sourceplate_file,
+                                  entire_rows=True,
+                                  saveto= None,
+                                  del_if_exists = False)
+    day_metadata = get_day_metadata(plate_metadata, manual_meta_file, saveto=metadata_file)

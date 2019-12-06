@@ -1,13 +1,8 @@
 MANIFEST.in
-README.txt
+README.md
 setup.py
 tierpsytools/__init__.py
-tierpsytools/build_metadata_from_filenames.py
-tierpsytools/feature_filtering.py
-tierpsytools/get_feat_summaries.py
 tierpsytools/helper.py
-tierpsytools/scaling_class.py
-tierpsytools/tierpsyPython.py
 tierpsytools.egg-info/PKG-INFO
 tierpsytools.egg-info/SOURCES.txt
 tierpsytools.egg-info/dependency_links.txt
