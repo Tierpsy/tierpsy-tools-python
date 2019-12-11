@@ -1,0 +1,4 @@
+strain,n_worms,set,pos,camera,date,file_name
+BRC20067,10,2,5,2,2062017,/Users/em812/Data/CeNDR/sample_res_files/BRC20067_worms10_food1-10_Set2_Pos5_Ch2_02062017_121709_featuresN.hdf5
+CB4856,5,3,4,2,2062017,/Users/em812/Data/CeNDR/sample_res_files/CB4856_worms5_food1-10_Set3_Pos4_Ch2_02062017_123431_featuresN.hdf5
+CB4856,10,2,5,1,2062017,/Users/em812/Data/CeNDR/sample_res_files/CB4856_worms10_food1-10_Set2_Pos5_Ch1_02062017_121709_featuresN.hdf5

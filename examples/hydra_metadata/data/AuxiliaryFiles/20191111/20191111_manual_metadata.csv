@@ -1,0 +1,6 @@
+date_yyyymmdd,instrument_name,imaging_run_number,imaging_plate_id,mark_position,days_in_diapause,worm_strain,bacteria_strain,media_type,number_worms_per_well,date_plates_poured_yyyymmdd
+20191111,Hydra01,1,rr1_sp1_ds1,A2,1,N2,OP50,LB,3,20191110
+20191111,Hydra02,1,rr1_sp1_ds4,A3,1,N2,OP50,LB,3,20191110
+20191111,Hydra03,1,rr1_sp1_ds7,A4,1,N2,OP50,LB,3,20191110
+20191111,Hydra04,1,rr1_sp1_ds10,B1,1,N2,OP50,LB,3,20191110
+20191111,Hydra05,1,rr1_sp1_ds11,A1,1,N2,OP50,LB,3,20191110
