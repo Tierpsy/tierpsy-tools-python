@@ -1,0 +1,13 @@
+﻿source_plate_id,column,drug_type,imaging_plate_drug_concentration,imaging_plate_drug_concentration_units,robot_runlog_filename,source_robotslot,water_robotslot
+1,1,DMSO,0.1,%,/Volumes/behavgenom$/Ida/Data/Hydra/PilotDrugExps/AuxiliaryFiles/20191108_tierpsytools_dev/OpentronsOutput/20191107_165240_runlog.csv,2,9
+1,2,DMSO,0.1,%,/Volumes/behavgenom$/Ida/Data/Hydra/PilotDrugExps/AuxiliaryFiles/20191108_tierpsytools_dev/OpentronsOutput/20191107_165240_runlog.csv,2,9
+1,3,DMSO,0.3,%,/Volumes/behavgenom$/Ida/Data/Hydra/PilotDrugExps/AuxiliaryFiles/20191108_tierpsytools_dev/OpentronsOutput/20191107_165240_runlog.csv,2,9
+1,4,DMSO,0.3,%,/Volumes/behavgenom$/Ida/Data/Hydra/PilotDrugExps/AuxiliaryFiles/20191108_tierpsytools_dev/OpentronsOutput/20191107_165240_runlog.csv,2,9
+1,5,DMSO,0.5,%,/Volumes/behavgenom$/Ida/Data/Hydra/PilotDrugExps/AuxiliaryFiles/20191108_tierpsytools_dev/OpentronsOutput/20191107_165240_runlog.csv,2,9
+1,6,DMSO,0.5,%,/Volumes/behavgenom$/Ida/Data/Hydra/PilotDrugExps/AuxiliaryFiles/20191108_tierpsytools_dev/OpentronsOutput/20191107_165240_runlog.csv,2,9
+1,7,DMSO,1,%,/Volumes/behavgenom$/Ida/Data/Hydra/PilotDrugExps/AuxiliaryFiles/20191108_tierpsytools_dev/OpentronsOutput/20191107_165240_runlog.csv,2,9
+1,8,DMSO,1,%,/Volumes/behavgenom$/Ida/Data/Hydra/PilotDrugExps/AuxiliaryFiles/20191108_tierpsytools_dev/OpentronsOutput/20191107_165240_runlog.csv,2,9
+1,9,DMSO,1.5,%,/Volumes/behavgenom$/Ida/Data/Hydra/PilotDrugExps/AuxiliaryFiles/20191108_tierpsytools_dev/OpentronsOutput/20191107_165240_runlog.csv,2,9
+1,10,DMSO,1.5,%,/Volumes/behavgenom$/Ida/Data/Hydra/PilotDrugExps/AuxiliaryFiles/20191108_tierpsytools_dev/OpentronsOutput/20191107_165240_runlog.csv,2,9
+1,11,NoCompound,0,%,/Volumes/behavgenom$/Ida/Data/Hydra/PilotDrugExps/AuxiliaryFiles/20191108_tierpsytools_dev/OpentronsOutput/20191107_165240_runlog.csv,2,9
+1,12,NoCompound,0,%,/Volumes/behavgenom$/Ida/Data/Hydra/PilotDrugExps/AuxiliaryFiles/20191108_tierpsytools_dev/OpentronsOutput/20191107_165240_runlog.csv,2,9

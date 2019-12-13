@@ -1,0 +1,20 @@
+__store:
+  chunksize: 18000
+  class: VideoImgStoreFFMPEG
+  created_utc: '2019-11-08T15:33:52.894117'
+  encoding: ''
+  format: nvenc-fast-yuv420-gray
+  imgdtype: uint8
+  imgshape: [3036, 3036]
+  timezone_local: Europe/London
+  uuid: 09548b36feed4acf9571fd37cddd40e1
+  version: 2
+acquisitionframerate: 25.0
+acquisitionframerateenable: true
+camera: Basler acA4024-29um (22956811)
+camera_serial: '22956811'
+exposuretime: 25000.0
+gain: 0.0
+synchronizationtime: -1.0
+synchronizationuuid: 214d943d23d746d98fa784edf0418c49
+timezone: ''

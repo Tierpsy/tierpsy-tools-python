@@ -17,6 +17,7 @@ import itertools
 #%%
 def merge_robot_metadata (sourceplates_file,saveto=None,del_if_exists=False):
     """
+<<<<<<< HEAD
     Function that imports the robot runlog and the associated source plates
     for a given day of experiments and uses them to compile information of
     drugs in the destination plates
@@ -25,7 +26,36 @@ def merge_robot_metadata (sourceplates_file,saveto=None,del_if_exists=False):
         source_plates - path to the source plates file `YYYYMMDD_sourceplates.csv`
     Output:
         robot related metadata for the given day of experiments as dataframe
+=======
+    @author: em812
+    Function that imports the robot runlog and the associated source plates 
+    for a given day of experiments and uses them to compile information of 
+    drugs in the destination plates.
+    
+    param:
+        sourceplates_file: path to .csv file
+            path to sourceplates_file `YYYYMMDD_sourceplates.csv`
+        randomized_by: string
+            How did the robot randomize the wells from the source 
+            plate to the destination plates?
+            options: 'column'/'source_column' = shuffled columns,
+                     'row'/'source_row' = shuffled rows, 
+                     'well'/'source_well' = shuffled well-by-well
+            The parameter randomized_by is expected to be a field in the 
+            sourceplates file.
+        saveto: path to .csv file
+            The full path of the file where the robot metadata will be saved.
+            If None, the robot metadata dataframe is not saved to disk.
+        del_if_exists: boolean
+            If True, then if the saveto file exists, it will be replaced.
+            
+    return:
+        robot_metadata: pandas dataframe
+            Robot related metadata for the given day of experiments as dataframe
+            
+>>>>>>> e7b325aea57d680efc586d59e9ac19ca19b929d3
     """
+    
     if saveto is None:
         date = sourceplates_file.stem.split('_')[0]
         saveto = Path(sourceplates_file).parent / (date+'_robot_metadata.csv')
@@ -112,14 +142,21 @@ def populate_96WPs(
         worm_sorter, entire_rows=True, saveto= None, del_if_exists = False
         ):
     """
+<<<<<<< HEAD
     Populate 96 well plates for tracking experiment where plates have been
+=======
+    @author: ilbarlow
+    Populate 96 well plates for tracking experiment where plates have been 
+>>>>>>> e7b325aea57d680efc586d59e9ac19ca19b929d3
     filled with different strains of food or worms.
+    
     param:
         source_plates: path for YYYYMMDD_sourceplates.csv file
 
     return:
         plate_metadata: one line per well; can be used in get_day_metadata
             function to compile with manual metadata
+            
     """
 
     # parameters for the 96WPs
@@ -219,11 +256,17 @@ def merge_robot_wormsorter(robot_metadata,
 # STEP 2
 def get_camera_serial(metadata,n_wells=96):
     """
-    Get the camera serial number from the well_name and instrument_name
+    @author: em812
+    Get the camera serial number from the well_name and instrument_name.
+    
     param:
-        metadata = dataframe with day metadata
+        metadata: pandas dataframe
+            Dataframe with day metadata
+            
     return:
-        out_metadata = day metadata dataframe including camera serial
+        out_metadata: pandas dataframe
+            Day metadata dataframe including camera serial
+            
     """
     from tierpsytools.hydra import CAM2CH_df,UPRIGHT_96WP
 
@@ -249,11 +292,21 @@ def get_camera_serial(metadata,n_wells=96):
 
     return out_metadata
 
+<<<<<<< HEAD
 
 def add_imgstore_name(metadata,aux_day_dir,raw_root=None,n_wells=96):
+=======
+    
+def add_imgstore_name(
+        metadata, raw_day_dir, n_wells=96
+        ):
+>>>>>>> e7b325aea57d680efc586d59e9ac19ca19b929d3
     """
-    Add the imgstore name of the hydra videos to the day metadata dataframe
+    @author: em812
+    Add the imgstore name of the hydra videos to the day metadata dataframe.
+    
     param:
+<<<<<<< HEAD
         metadata = dataframe with metadata for a given day of experiments. See README.md for details on fields.
         n_wells = number of wells in imaging plate (only 96 supported at the moment)
     return:
@@ -296,11 +349,103 @@ def add_imgstore_name(metadata,aux_day_dir,raw_root=None,n_wells=96):
     # keep only imgstore_name (experiment_day_dir/imgstore_name_dir)
     MAP2PATH['imgstore_name'] = MAP2PATH['imgstore_name'].apply(lambda x: '/'.join(x[0].parts[-3:-1]) if len(x)==1 else np.nan)
 
+=======
+        metadata = pandas dataframe
+            Dataframe with metadata for a given day of experiments. 
+            See README.md for details on fields.
+        raw_day_dir = path to directory
+            RawVideos root directory of the specific day, where the 
+            imgstore names can be found. 
+        n_wells = integer
+            Number of wells in imaging plate (only 96 supported at the 
+            moment)
+            
+    return:
+        out_metadata = metadata dataframe with imgstore_name added
+        
+    """    
+    from os.path import join
+    
+    ## Checks
+    # - check if raw_day_dir exists
+    if not raw_day_dir.exists:
+        warnings.warn("\nRawVideos day directory was not found. "
+                      +"Imgstore names cannot be added to the metadata.\n",
+                      +"Path {} not found.".format(raw_day_dir))
+        return metadata
+    
+    # - if the raw_dat_dir contains a date in yyyymmdd format, check if the 
+    #   date in raw_day_dir matches the date of runs stored in the metadata 
+    #   dataframe
+    date_of_runs = metadata['date_yyyymmdd'].astype(str).values[0]
+    date_in_dir = re.findall(r'(20\d{6})',raw_day_dir.stem)
+    if len(date_in_dir)==1 and date_of_runs != date_in_dir[0]:
+        warnings.warn('\nThe date in the RawVideos day directory does not '
+                      +'match the date_yyyymmdd in the day metadata '
+                      +'dataframe. Imgstore names cannot be added to the '
+                      +'metadata.\nPlease check the dates and try again.')
+        return metadata
+        
+    # add camera serial number to metadata
+    metadata = get_camera_serial(metadata,n_wells=n_wells)
+    
+    # get imgstore full paths = raw video directories that contain a
+    # metadata.yaml file and match the run and camera number
+    MAP2PATH = metadata[
+            ['imaging_run_number','camera_serial']
+            ].drop_duplicates()
+    MAP2PATH['run_name'] = metadata['imaging_run_number'].apply(
+            lambda x: 'run{}'.format(x)
+            )
+    #print('There are {} videos expected from metadata in {}.\n'.format(
+    #    MAP2PATH.shape[0],aux_day_dir))
+    
+    file_list = [file for file in raw_day_dir.rglob("metadata.yaml")]
+    #print('There are {} raw videos found in {}.\n'.format(
+    #    len(file_list),raw_day_dir))
+    
+    MAP2PATH['imgstore_name'] = MAP2PATH[
+            ['run_name','camera_serial']
+            ].apply(
+                lambda x: [file 
+                           for file in file_list 
+                           if np.all([str(ix) in str(file) 
+                           for ix in x])],
+                axis=1)
+    
+    ## Checks
+    # - check if there are multiple videos with the same day, run and camera
+    #   number. If yes, raise a warning (it is not necessarily an error, but 
+    #   good to let the user know).
+    not_unique = MAP2PATH['imgstore_name'].apply(
+            lambda x: True if len(x)>1 else False).values
+    if np.sum(not_unique)>0:
+        warnings.warn('\n\nThere is(are) {} set(s) of '.format(np.sum(not_unique))
+                      +'videos with the same day, run and camera number.\n\n'
+                     )
+    # - check if there are missing videos (we expect to have videos from every
+    #   camera of a given instrument). If yes, raise a warning.
+    not_found = MAP2PATH['imgstore_name'].apply(
+            lambda x: True if len(x)==0 else False).values
+    if np.sum(not_found)>0:
+        not_found = MAP2PATH.loc[not_found,:]
+        for i,row in not_found.iterrows():
+            warnings.warn('\n\nNo video found for day '
+                          +'{}, run {}, camera {}.\n\n'.format(
+                                  raw_day_dir.stem,*row.values)
+                          )
+            
+    # keep only short imgstore_name (experiment_day_dir/imgstore_name_dir)
+    MAP2PATH['imgstore_name'] = MAP2PATH['imgstore_name'].apply(
+            lambda x: [join(*ix.parts[-3:-1]) for ix in x])
+    
+>>>>>>> e7b325aea57d680efc586d59e9ac19ca19b929d3
     # merge dataframes to store imgstore_name for each metadata row
     out_metadata = pd.merge(metadata,MAP2PATH[['imaging_run_number','camera_serial','imgstore_name']],how='outer',on=['imaging_run_number','camera_serial'])
     assert out_metadata.shape[0] == metadata.shape[0]
 
     return out_metadata
+<<<<<<< HEAD
 
 
 def get_day_metadata(imaging_plate_metadata, manual_metadata_file, merge_on=['imaging_plate_id'], n_wells=96, saveto=None,del_if_exists=False):
@@ -330,12 +475,162 @@ def get_day_metadata(imaging_plate_metadata, manual_metadata_file, merge_on=['im
         if  del_if_exists:
             warnings.warn('\n\nMetadata file {} already exists. File will be overwritten.\n\n'.format(saveto))
             metadata_file.unlink()
+=======
+    
+def get_date_of_runs_from_aux_files(manual_metadata_file):
+    """
+    @author: em812
+    Finds the date of the runs in the manual_metadata_file. 
+    If the date field is missing, then it looks for the date of runs in the 
+    manual_metadata_file file name (in the format yyyymmdd).
+    If there is no date in this format in the file name, then it looks at the
+    folder name (which is the folder for a specific day of experiments).
+    If the date in yyyymmdd format cannot be found in any of these locations,
+    an error is raised.
+    
+    param:
+        manual_metadata_file: full path to .csv file
+            Full path to the manual metadata file
+            
+    return:
+        date_of_runs: string
+            The date of the experiments, in yyyymmdd format
+    """
+    manual_metadata = pd.read_csv(manual_metadata_file, index_col=False)
+    if 'date_yyyymmdd' in manual_metadata.columns:
+        date_of_runs = manual_metadata['date_yyyymmdd'].astype(str).values[0]
+    else:
+        date_of_runs = re.findall(r'(20\d{6})',manual_metadata_file.stem)
+        if len(date_of_runs)==1:
+            date_of_runs = date_of_runs[0]
+        else:
+            date_of_runs = re.findall(r'(20\d{6})',
+                                      manual_metadata_file.parent.stem)
+            if len(date_of_runs)==1:
+                date_of_runs = date_of_runs[0]
+            else:
+                raise ValueError('The date of the experiments cannot be '
+                                 +'identified in the auxiliary files path '
+                                 +'names. Please add a data_yyyymmdd column '
+                                 +'to the manual_metadata file.'
+                                 )
+    
+    # If the aux_day_dir contains the date, then make sure it matches the date
+    # extracted from the manual_metadate_file
+    date_in_dir = re.findall(r'(20\d{6})',manual_metadata_file.parent.stem)
+    if len(date_in_dir)==1 and date_in_dir[0]!=date_of_runs:
+        raise ValueError('\nThe date_of_runs taken from the '
+                         +'manual_metadata_file ({}) '.format(date_of_runs)
+                         +'does not match the date of runs in the folder '
+                         +'name {}.\n'.format(manual_metadata_file.parent)
+                         +'Please set the correct date and try again.')
+    return date_of_runs
+
+def check_dates_in_yaml(metadata,raw_day_dir):
+    """
+    Checks the day metadata, to make sure that the experiment date stored in
+    the metadata dataframe matches the date in the metadata.yaml file in the
+    corresponding raw video directory.
+    
+    param:
+        metadata : pandas dataframe
+            Dataframe containing all the metadata from one day of experiments
+        raw_day_dir : directory path
+            Path of the directory containing the RawVideos for the 
+            specific day of experiments.
+
+    return:
+        None
+    """
+    
+    return
+
+def get_day_metadata(
+        imaging_plate_metadata, manual_metadata_file, 
+        merge_on=['imaging_plate_id'], n_wells=96, saveto=None,
+        del_if_exists=False, include_imgstore_name = True, raw_day_dir=None
+        ):
+    """
+    @author: em812
+    Incorporates the robot metadata and the manual metadata of the hydra rigs
+    to get all the metadata for a given day of experiments.
+    Also, it adds the imgstore_name of the hydra vidoes.
+    
+    param:
+        imaging_plate_metadata: pandas dataframe
+                Dataframe containing the metadata for all the 
+                wells of each imaging plate (If the robot was used, then this 
+                is the robot_metadata obtained by the 
+                robot_to_metadata.merge_robot_metadata function)
+        manual_metadata: .csv file path 
+                File with the details of rigs and runs 
+                (see README for minimum required fields)
+        merge_on: column name or list of columns
+                Column(s) in common in imaging_plate_metadata and 
+                manual_metadata, that can be used to merge them
+        n_wells: integer
+                number of wells in imaging plate
+        saveto: .csv file path
+                File path to save the day metadata in (if None, the 
+                metadata are saved in the same folder as the manual metadata)
+        del_if_exists: boolean
+                If True and the metadata file exists in the defined
+                path, the existing file will be deleted and a new file will be
+                created. If False, the operation will be aborted and a warning
+                will be produced.
+        include_imgstore_name: boolean
+                If True, the function will call the add_imgstore_name function 
+                to look in the raw_day_dir and get the imgstore names for each 
+                row in the metadata.
+        raw_day_dir: directory path
+                Path of the directory containing the RawVideos for the 
+                specific day of experiments. It is used to get the imgstore 
+                names. If None, then the standard file structure is assumed,
+                and the path is obtained by the path of the auxiliary files 
+                for the specific day, by replacing AuxiliaryFile by RawVideos.
+                
+    return:
+        metadata: pandas dataframe
+            dataframe with day metadata
+    """    
+    #find the date of the hydra experiments
+    date_of_runs = get_date_of_runs_from_aux_files(manual_metadata_file)
+        
+    aux_day_dir = manual_metadata_file.parent    
+    if saveto is None:
+        saveto = aux_day_dir / '{}_day_metadata.csv'.format(date_of_runs)
+    
+    if saveto.exists():
+        if  del_if_exists:
+            warnings.warn('\n\nMetadata file {} already exists.'.format(saveto)
+                          +' File will be overwritten.\n\n')
+            saveto.unlink()
+>>>>>>> e7b325aea57d680efc586d59e9ac19ca19b929d3
         else:
             warnings.warn('\n\nMetadata file {} already exists. Nothing to do here.\n\n'.format(saveto))
             return
+<<<<<<< HEAD
 
     manual_metadata = pd.read_csv(manual_metadata_file, index_col=False).assign(date_yyyymmdd=date_of_runs)
 
+=======
+    
+    manual_metadata = pd.read_csv(manual_metadata_file, index_col=False)
+    
+    if 'date_yyyymmdd' not in manual_metadata.columns:
+        manual_metadata['date_yyyymmdd'] = str(date_of_runs)
+    
+    
+    # make sure there is overlap in the image_plate_id
+    if not np.all(
+            np.isin(imaging_plate_metadata[merge_on],manual_metadata[merge_on])
+            ):
+        warnings.warn('There are {} values in the imaging '.format(merge_on)
+                    +'plate metadata that do not exist in the manual '
+                    +'metadata. These plates will be dropped from the day'
+                    +'metadata file.')
+    
+>>>>>>> e7b325aea57d680efc586d59e9ac19ca19b929d3
     # merge two dataframes
     metadata = imaging_plate_metadata.merge(manual_metadata,how='inner', on=merge_on,indicator=False)
 
@@ -343,11 +638,34 @@ def get_day_metadata(imaging_plate_metadata, manual_metadata_file, merge_on=['im
     metadata.rename(columns={'destination_well':'well_name'}, inplace=True)
 
     # add imgstore name
+<<<<<<< HEAD
     metadata = add_imgstore_name(metadata,aux_day_dir,n_wells=n_wells)
 
     print('Saving metadata file: {} '.format(metadata_file))
     metadata.to_csv(metadata_file, index=False)
 
+=======
+    if include_imgstore_name:
+        if raw_day_dir is None:
+            raw_day_dir = Path(
+                    str(aux_day_dir).replace('AuxiliaryFiles','RawVideos')
+                    )
+        if raw_day_dir.exists:
+            metadata = add_imgstore_name(
+                    metadata,raw_day_dir,n_wells=n_wells
+                    )
+            #check_dates_in_yaml(metadata,raw_day_dir)
+        else:
+            warnings.warn("\nRawVideos day directory was not found. "
+                          +"Imgstore names cannot be added to the metadata.\n",
+                          +"Path {} not found.".format(raw_day_dir)
+                          )
+    
+    # Save to csv file
+    print('Saving metadata file: {} '.format(saveto))        
+    metadata.to_csv(saveto, index=False)
+    
+>>>>>>> e7b325aea57d680efc586d59e9ac19ca19b929d3
     return metadata
 
 
@@ -355,12 +673,31 @@ def get_day_metadata(imaging_plate_metadata, manual_metadata_file, merge_on=['im
 # STEP 3:
 def concatenate_days_metadata(aux_root_dir,list_days=None,saveto=None):
     """
+<<<<<<< HEAD
     Reads all the yyyymmdd_day_metadata.csv files from the different days of experiments
     and creates a full metadata file all_metadata.csv
     param:
         aux_root_dir: root AuxiliaryFiles directory containing all the folders for the individual days of experiments
         list_days: list of folder names (dates) to read from. If None (default), it reads all the subfolders in the root_dir.
         saveto: filename to save all compiled metadata to
+=======
+    @author: em812
+    Reads all the yyyymmdd_day_metadata.csv files from the different days of 
+    experiments and creates a full metadata file all_metadata.csv.
+    
+    param:
+        aux_root_dir: path to directory
+            Root AuxiliaryFiles directory containing all the folders 
+            for the individual days of experiments
+        list_days: list like object
+            List of folder names (experiment days) to read from. 
+            If None (default), it reads all the subfolders in the root_dir.
+        saveto: path to .csv file
+            Filename where all compiled metadata will be saved
+    
+    return:
+        None
+>>>>>>> e7b325aea57d680efc586d59e9ac19ca19b929d3
     """
     aux_root_dir = Path(aux_root_dir)
 
@@ -375,8 +712,13 @@ def concatenate_days_metadata(aux_root_dir,list_days=None,saveto=None):
     meta_files = []
     for day in list_days:
         ## Find the correct day_metadata file
+<<<<<<< HEAD
         auxfiles = aux_root_dir.joinpath(day).glob('*_day_metadata.csv')
 
+=======
+        auxfiles = [file for file in aux_root_dir.joinpath(day).glob('*_day_metadata.csv')]
+        
+>>>>>>> e7b325aea57d680efc586d59e9ac19ca19b929d3
         # checks
         if len(auxfiles) > 1:
             is_ok = np.zeros(len(auxfiles)).dtype(bool)
@@ -393,8 +735,13 @@ def concatenate_days_metadata(aux_root_dir,list_days=None,saveto=None):
     all_meta = []
     for file in meta_files:
         all_meta.append(pd.read_csv(file))
+<<<<<<< HEAD
 
     all_meta = all_meta.concat(all_meta,axis=0)
+=======
+    
+    all_meta = pd.concat(all_meta,axis=0)
+>>>>>>> e7b325aea57d680efc586d59e9ac19ca19b929d3
     all_meta.to_csv(saveto,index=False)
 
     return
