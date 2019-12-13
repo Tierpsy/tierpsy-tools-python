@@ -7,6 +7,11 @@ Created on Thu Nov 21 12:25:41 2019
 """
 import pandas as pd
 from pathlib import Path
+<<<<<<< Updated upstream
+=======
+from tierpsytools.hydra.hydra_helper import exract_randomized_by
+from tierpsytools.hydra.hydra_helper import rename_out_meta_cols, explode_df
+>>>>>>> Stashed changes
 import re
 import warnings
 import numpy as np
@@ -106,6 +111,7 @@ def merge_robot_metadata (sourceplates_file,saveto=None,del_if_exists=False):
 
 #%% populate 96 well plates for tracking experiment where plates have been filled with different strains of food or worms
 
+<<<<<<< Updated upstream
 def populate_96WPs(source_plates, entire_rows=True, saveto= None, del_if_exists = False):
     """ Input:
         source_plates - path for YYYYMMDD_sourceplates.csv file
@@ -116,10 +122,37 @@ def populate_96WPs(source_plates, entire_rows=True, saveto= None, del_if_exists 
     if saveto is None:
         date = source_plates.stem.split('_')[0]
         saveto = Path(source_plates).parent / (date+'_plate_metadata.csv')
+=======
+def populate_96WPs(
+        worm_sorter, entire_rows=True, saveto= None, del_if_exists = False
+        ):
+    """ 
+    Populate 96 well plates for tracking experiment where plates have been 
+    filled with different strains of food or worms.
+    param:
+        source_plates: path for YYYYMMDD_sourceplates.csv file
         
+    return:
+        plate_metadata: one line per well; can be used in get_day_metadata
+            function to compile with manual metadata
+    """
+>>>>>>> Stashed changes
+        
+    # parameters for the 96WPs
+    n_columns = 12
+    column_names = np.arange(1, n_columns+1)
+    row_names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+    well_names = list(itertools.product(row_names, column_names))
+    
+    # saving and overwriting checks
+    if saveto is None:
+        date = worm_sorter.stem.split('_')[0]
+        saveto = Path(worm_sorter).parent / (date+'_plate_metadata.csv')
+
     # check if file exists
     if (saveto is not False) and (saveto.exists()):
         if del_if_exists:
+<<<<<<< Updated upstream
             warnings.warn('Plate metadata file {} already exists. File will be overwritten.'.format(saveto))
             saveto.unlink()
         else:
@@ -143,10 +176,39 @@ def populate_96WPs(source_plates, entire_rows=True, saveto= None, del_if_exists 
     sourceplatesDF['end_column'] = [re.findall(r"(\d{1,2})", r.end_well)[0] for i,r in sourceplatesDF.iterrows()]
    
     #create 96WP template to fill up
+=======
+            warnings.warn('Plate metadata file {} already '.format(saveto)
+                          + 'exists.File will be overwritten.')
+            saveto.unlink()
+        else:
+            warnings.warn('Plate metadata file {} already '.format(saveto)
+                          + 'exists. Nothing to do here. If you want to '
+                          + 'recompile the day metadata, rename or delete the '
+                          + 'exisiting file.')
+            return None
+
+    # import worm_sorter metadata and find the start and end rows and columns
+    worm_sorter_df = pd.read_csv(worm_sorter)
+    worm_sorter_df['start_row'] = [re.findall(r"[A-Z]", r.start_well)[0]
+                                   for i, r in worm_sorter_df.iterrows()
+                                   ]
+    worm_sorter_df['end_row'] = [re.findall(r"[A-Z]", r.end_well)[0]
+                                 for i, r in worm_sorter_df.iterrows()
+                                 ]
+    worm_sorter_df['start_column'] = [re.findall(r"(\d{1,2})", r.start_well)[0]
+                                      for i, r in worm_sorter_df.iterrows()
+                                      ]
+    worm_sorter_df['end_column'] = [re.findall(r"(\d{1,2})", r.end_well)[0]
+                                    for i, r in worm_sorter_df.iterrows()
+                                    ]
+
+    # create 96WP template to fill up
+>>>>>>> Stashed changes
     plate_template = pd.DataFrame()
     plate_template['imaging_plate_row'] = [i[0] for i in well_names]
     plate_template['imaging_plate_column'] = [i[1] for i in well_names]
     plate_template['well_name'] = [i[0] + str(i[1]) for i in well_names]
+<<<<<<< Updated upstream
     
     if entire_rows:
         #populate the dataframe
@@ -172,8 +234,56 @@ def populate_96WPs(source_plates, entire_rows=True, saveto= None, del_if_exists 
     else:
         print ('cannot use this function for generating the metadata; fills entire rows only')
         return
+=======
+
+    if not entire_rows:
+        print ('cannot use this function for generating the metadata;'+
+               ' fills entire rows only.')
+        return None
+    
+    # populate the dataframe
+    plate_metadata=[]
+    for i,r in worm_sorter_df.iterrows():
+        _section = (
+                plate_template[
+                        (r.start_row <= plate_template.imaging_plate_row)
+                        & (plate_template.imaging_plate_row <= r.end_row)
+                        ]).reset_index(drop=True)
+        _details = pd.concat(
+                _section.shape[0]*[r.to_frame().transpose()]
+                ).reset_index(drop=True)
+        plate_metadata.append(
+                pd.concat([_section, _details], axis=1, sort=True))
+    
+    plate_metadata = pd.concat(plate_metadata)
+    
+    plate_metadata.to_csv(saveto, index=False)
+>>>>>>> Stashed changes
     
 
+
+#%% extra function if using both robot and wormsorter
+    
+def merge_robot_wormsorter(robot_metadata,
+                           plate_metadata,
+                           merge_on=['imaging_plate_id']
+                           ):
+    """ Function for combining the outputs of the above so that concise and
+    comprehensive dataframe can be used in get_day_metadata
+    Input:
+    robot_metadata - output from merge_robot_metadata function
+    
+    plate_metadata - output form populate_96WP function
+    
+    Ouput:
+    concat_metadata
+    """
+    concat_metadata = pd.merge(robot_metadata,
+                               plate_metadata,
+                               on=merge_on,
+                               how='outer'
+                               )
+    return concat_metadata
 
 #%%
 # STEP 2
@@ -399,7 +509,7 @@ if __name__ == '__main__':
         
     #%%Example 3:
     day_root_dir = Path('/Volumes/behavgenom$/Ida/Data/Hydra/ICDbacteria/AuxiliaryFiles/20191122')
-    sourceplate_file = day_root_dir / '20191122_sourceplates.csv'
+    sourceplate_file = day_root_dir / '20191122_wormsorter.csv'
     manual_meta_file = day_root_dir / '20191122_manual_metadata.csv'
     metadata_file = day_root_dir.joinpath('20191122_day_metadata.csv')
     
@@ -408,4 +518,11 @@ if __name__ == '__main__':
                                   saveto= None,
                                   del_if_exists = False)
     day_metadata = get_day_metadata(plate_metadata, manual_meta_file, saveto=metadata_file)
+<<<<<<< Updated upstream
     
+=======
+    #%% Example 4
+    
+    
+    concatenated_metadata = merge_robot_wormsorter(robot_metadata, plate_metadata)
+>>>>>>> Stashed changes
