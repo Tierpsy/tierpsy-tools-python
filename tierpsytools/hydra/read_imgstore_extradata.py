@@ -5,19 +5,39 @@ Created on Mon Oct 21 10:44:10 2019
 @author: lferiani
 """
 
-import pandas as pd
-import imgstore
 import json
+import tqdm
+import imgstore
+import argparse
+import warnings
+import numpy as np
+import pandas as pd
+import seaborn as sns
 from pathlib import Path
 from matplotlib import pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+from tierpsytools.hydra.hydra_filenames_helper import find_imgstore_videos
+
+warnings.filterwarnings('ignore', message='calling yaml.load()*')
+
+
+# %% add functionality to Path
+def strreplace(self, old, new):
+    return Path(str(self).replace(old, new))
+
+
+Path.strreplace = strreplace
+
 
 # %% class definition
-
-
 class ExtraDataReader(object):
+    """"ExtraDataReader
+
+    Wrapper for loopbio's own class as I was having problems with it'
+    """
 
     def __init__(self, filename):
-        self.store = imgstore.new_for_filename(filename)
+        self.store = imgstore.new_for_filename(str(filename))
         self.ext = '.extra_data.json'
         self.extra_data = None
 
@@ -51,7 +71,7 @@ class ExtraDataReader(object):
         else:
             out = self.extra_data
 
-        return out
+        return out.copy()
 
     def plot_extra_data(self):
 
@@ -106,15 +126,166 @@ class ExtraDataReader(object):
         return out.loc[['mean', 'std', 'min', 'max']]
 
 
-# %%
+def plot_imagingset_sensordata(setname, setdata):
+    # first read and collate all data
+    edr_df = []  # initialising list of dataframes
+    frame = None
+    for i, row in setdata.iterrows():
+        # use the class above
+        edr = ExtraDataReader(row['full_path'])
+        df = edr.get_extra_data(includeonly=['light', 'tempi',
+                                             'tempo', 'humidity'])
+        df['channel'] = row['channel']
+        edr_df.append(df)
+        # read first frame as well
+        if row['channel'] == 'Ch1':
+            frame = edr.store.get_next_image()[0]
+            edr.store.close()
+    # make one big df
+    edr_df = pd.concat(edr_df, axis=0, ignore_index=True)
+
+    # Preprocessing:
+    # fix light sensor issues
+    edr_df['light_was_nan'] = edr_df['light'].isna()
+    # simple close one-point holes in the sensor data
+    edr_df['light'].fillna(method='ffill', limit=1, inplace=True)
+    # assume that if failed for more than 1 s then it's the light's fault
+    sat_value = 8000
+    edr_df['light'].fillna(sat_value, inplace=True)
+    edr_df['light'].clip(lower=0, upper=sat_value, inplace=True)
+    # round time to the second
+    edr_df['time_s'] = edr_df['time'].round()
+
+    # Plots
+    fig, axs = plt.subplots(2, 2, figsize=(8, 4.8))
+    # light
+    sns.lineplot(x='time_s',
+                 y='light',
+                 data=edr_df,
+                 estimator='mean',
+                 ci='sd',
+                 ax=axs[0, 0])
+    sns.scatterplot(x='time', y='light',
+                    data=edr_df[edr_df['light_was_nan']],
+                    marker='x',
+                    color="tab:orange",
+                    edgecolor=None,
+                    label="was_nan",
+                    ax=axs[0, 0])
+    axs[0, 0].set_ylim((-500, 8500))
+    axs[0, 0].tick_params(labelbottom=False)
+    # temperatures
+    sns.lineplot(x='time_s',
+                 y='temperature',
+                 hue='sensor',
+                 estimator='mean',
+                 ci='sd',
+                 ax=axs[0, 1],
+                 data=edr_df.melt(id_vars=['time_s'],
+                                  value_vars=['tempi', 'tempo'],
+                                  value_name='temperature',
+                                  var_name='sensor'))
+    axs[0, 1].set_ylim((16, 28))
+    # axs[0, 1].yaxis.tick_right()
+    axs[0, 1].tick_params(labelleft=False, labelright=True)
+    axs[0, 1].yaxis.set_label_position("right")
+    # humidity
+    sns.lineplot(x='time_s',
+                 y='humidity',
+                 estimator='mean',
+                 ci='sd',
+                 ax=axs[1, 0],
+                 data=edr_df)
+    axs[1, 0].set_ylim((15, 60))
+    plt.setp(axs[1, 0].get_yticklabels()[-1], visible=False)
+    # part of frame with name
+    if frame is not None:
+        axs[1, 1].imshow(np.rot90(frame[:, min(frame.shape):]), cmap='gray')
+    axs[1, 1].set_axis_off()
+    # title figure and otehr adjustments
+    plt.subplots_adjust(hspace=.0)
+    for ax in axs.flatten():
+        ax.tick_params(direction='in', top=True, right=True)
+    fig.suptitle(setname)
+
+    return fig
+
+
+def check_hydra_sensordata(path_to_imgstores, is_makereport=True):
+    """check_hydra_sensordata
+    Read the sensor data collected by the Hydra rigs and returns a report
+    showing how light, temperature, humidity behaved during the recording.
+
+    Parameters
+    ----------
+    path_to_imgstores : pathlib.Path or string
+        Path pointing to the directory containing the recordings.
+
+    Returns
+    -------
+    None.
+
+    """
+    # input check
+    if isinstance(path_to_imgstores, str):
+        path_to_imgstores = Path(path_to_imgstores)
+    # create the report's path
+    # check for standard folder structure
+    if 'RawVideos' in path_to_imgstores.parts:
+        path_to_report = path_to_imgstores.strreplace('RawVideos',
+                                                      'AuxiliaryFiles')
+        path_to_report.mkdir(parents=True, exist_ok=True)
+    else:
+        path_to_report = path_to_imgstores
+    path_to_report = path_to_report / 'sensors_data.pdf'
+
+    # get a dataframe with all videos
+    videos_df = find_imgstore_videos(path_to_imgstores)
+
+    # group all recordings by imaging name (to get the 6 cameras' videos from
+    # one recording), loop over them, and collect the data. Store the data in
+    # a list of dataframes that will then colated in a single dataframe
+    videos_df_g = videos_df.groupby("imaging_set")
+    # loop on imaging sets
+    with PdfPages(path_to_report, keep_empty=False) as pdf:
+        for name, group in tqdm.tqdm(videos_df_g):
+            # function that acts on the imaging set
+            fig = plot_imagingset_sensordata(name, group)
+            if is_makereport:
+                pdf.savefig(fig)
+                plt.close(fig)
+    if not is_makereport:
+        plt.show(block=False)
+        input("Press any key to continue. This will close all figures.")
+        plt.close('all')
+
+
+def hydra_sensordata_report():
+    # input parser
+    parser = argparse.ArgumentParser(description=())
+    parser.add_argument('folder_path',
+                        type=str)
+    parser.add_argument('-n', '--no-pdf',
+                        action='store_true')  # no_pdf defaults to false
+    args = parser.parse_args()
+    dirname = Path(args.folder_path)
+    is_makereport = not args.no_pdf  # dash is converted to underscore
+    # However dash is standard in *nix extra inputs to I'll keep it a dash
+    check_hydra_sensordata(dirname, is_makereport=is_makereport)
+
+
+# %% main
+
 
 if __name__ == '__main__':
-    fname = Path('/Volumes/behavgenom$/Luigi/')
-    fname = fname / 'Data/Blue_LEDs_tests/RawVideos/20191017_pilotexp/'
-    fname = fname / 'pilotexp_run1_bluelight_20191017_155329.22956813'
+    # dirname = Path('/Volumes/behavgenom$/Ida/')
+    # dirname = dirname / 'Data/Hydra/SygentaTestVideos/RawVideos/'
 
-    edr = ExtraDataReader(fname)
-    print(edr.get_extra_data(includeonly=['light']))
-    edr.plot_extra_data()
-    sumedr = edr.get_summary(includeonly=['light'])
-    print(sumedr)
+    # plt.close('all')
+    # check_hydra_sensordata(dirname, is_makereport=True)
+    hydra_sensordata_report()
+    # edr = ExtraDataReader(fname)
+    # print(edr.get_extra_data(includeonly=['light']))
+    # edr.plot_extra_data()
+    # sumedr = edr.get_summary(includeonly=['light'])
+    # print(sumedr)
