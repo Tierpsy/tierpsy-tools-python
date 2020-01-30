@@ -9,6 +9,7 @@ import pandas as pd
 from pathlib import Path
 from tierpsytools.hydra import CAM2CH_df
 
+
 def raw_to_masked(fname):
     out = str(fname).replace("RawVideos", "MaskedVideos")
     out = Path(out.replace(".yaml", ".hdf5"))
