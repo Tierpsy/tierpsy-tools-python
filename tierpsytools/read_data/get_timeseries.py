@@ -117,7 +117,7 @@ def get_timeseries(root_dir, select_keywords=None, drop_keywords=None,
         file_time = time()
         print('Reading timeseries from file {} of {}'.format(ifl+1,filenames.shape[0]))
         timeseries = read_timeseries(file)
-        data['file_id'] = timeseries
+        data[fileid] = timeseries
         print('File read in {} sec.'.format(time()-file_time))
     print('Done reading in {} sec.'.format(time()-start_time))
 
