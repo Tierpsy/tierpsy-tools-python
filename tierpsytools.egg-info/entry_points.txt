@@ -1,0 +1,3 @@
+[console_scripts]
+hydra_sensordata_report = tierpsytools.hydra.read_imgstore_extradata:hydra_sensordata_report
+
