@@ -59,7 +59,7 @@ def k_significant_feat(feat, y_class, k=5, featNames=None, plotgroups=None,
         
    
 
-def top_feat_in_PCs(X,pc=1,k='auto'):
+def top_feat_in_PCs(X,pc=0,k='auto'):
     """
     Runs PCA and gives the top k contributing features for the specified 
     principal component (by default the first component).
@@ -77,7 +77,7 @@ def top_feat_in_PCs(X,pc=1,k='auto'):
     pca.fit(Xscaled)
     
     ## pca.components_ --> each row contains the feature coefficients for one component
-    component = pca.components_[pc-1,:]
+    component = pca.components_[pc,:]
     
     sortid = np.flip(np.argsort(np.abs(component)))
     
