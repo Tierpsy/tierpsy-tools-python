@@ -6,9 +6,12 @@ Created on Fri Nov 15 14:39:29 2019
 @author: em812
 """
 
-def k_significant_feat(feat,y_class,k=5,featNames=None,plotgroups=None,grouplabels=None,method='f_classif',figsize=None,title=None,savefig=None,close_after_plotting=False):
+def k_significant_feat(feat, y_class, k=5, featNames=None, plotgroups=None,
+                       grouplabels=None, method='f_classif', figsize=None,
+                       title=None, savefig=None, close_after_plotting=False):
     """
-    Finds the k most significant features in the feature matrix, based on the classification in y_class
+    Finds the k most significant features in the feature matrix, based on the 
+    classification in y_class
     and plots their distribution.
     Uses univariate feature selection.
     param:
@@ -58,7 +61,8 @@ def k_significant_feat(feat,y_class,k=5,featNames=None,plotgroups=None,grouplabe
 
 def top_feat_in_PCs(X,pc=1,k='auto'):
     """
-    Runs PCA and gives the top k contributing features for the specified principal component (by default the first component).
+    Runs PCA and gives the top k contributing features for the specified 
+    principal component (by default the first component).
     
     """
     import pandas as pd

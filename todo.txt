@@ -1,0 +1,7 @@
+# tierpsytools
+
+- change read_data.get_feat_summaries to work with multi-wells
+
+- filter_features.replace_nan_inf(feat) add input: method, axis
+
+- k_significant_feat - only keep significant ones corrected for multiple comparisons
