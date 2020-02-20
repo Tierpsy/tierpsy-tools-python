@@ -8,17 +8,17 @@ Created on Fri May 24 17:34:22 2019
 
 from pathlib import Path
 import pandas as pd
-    
+
 def get_digit(string,dtype=float):
     if dtype == int:
         fun = int
     else:
         fun = float
-        
+
     digit = [s for s in string if s.isdigit()]
     digit = ''.join(digit)
     digit = fun(digit)
-    
+
     return digit
 
 def build_meta_cendr(root_results,glob_keyword,recursive=False):
@@ -26,7 +26,7 @@ def build_meta_cendr(root_results,glob_keyword,recursive=False):
         result_files = [file for file in Path(root_results).rglob(glob_keyword)]
     else:
         result_files = [file for file in Path(root_results).glob(glob_keyword)]
-    
+
     metadata = []
     for file in result_files:
         strain = file.stem.split('_')[0]
@@ -35,23 +35,23 @@ def build_meta_cendr(root_results,glob_keyword,recursive=False):
         pos = get_digit(file.stem.split('_')[4],dtype=int)
         camera = get_digit(file.stem.split('_')[5],dtype=int)
         date = int(file.stem.split('_')[6])
-        
-        tmp_meta = pd.DataFrame([[strain,n_worms,set_n,pos,camera,date,str(file)]],columns=['strain','n_worms','set','pos','camera','date','file_name'])
+
+        tmp_meta = pd.DataFrame([[strain,n_worms,set_n,pos,camera,date,str(file)]],columns=['strain','n_worms','set','pos','camera','date','filename'])
         metadata.append(tmp_meta)
-        
+
     metadata = pd.concat(metadata,axis=0,sort=False)
     metadata.reset_index(drop=True,inplace=True)
-        
+
     return metadata
-    
+
 def build_meta_singleworms(root_results,glob_keyword,keep_all_keywords=None,keep_any_keywords=None,recursive=False):
     import numpy as np
-    
+
     if recursive:
         result_files = [file for file in Path(root_results).rglob(glob_keyword)]
     else:
         result_files = [file for file in Path(root_results).glob(glob_keyword)]
-    
+
     metadata = []
     for file in result_files:
         if keep_all_keywords is not None:
@@ -68,60 +68,60 @@ def build_meta_singleworms(root_results,glob_keyword,keep_all_keywords=None,keep
             year = file.stem[file.stem.upper().find('L_')+2:file.stem.upper().find('L_')+6]
         else:
             year = file.stem[file.stem.find('_20')+1:file.stem.find('_20')+5]
-        tmp_meta = pd.DataFrame([[strain,ventral_direction,int(year),str(file)]],columns=['strain','ventral_direction','year','file_name'])
+        tmp_meta = pd.DataFrame([[strain,ventral_direction,int(year),str(file)]],columns=['strain','ventral_direction','year','filename'])
         metadata.append(tmp_meta)
-        
+
     metadata = pd.concat(metadata,axis=0,sort=False)
     metadata.reset_index(drop=True,inplace=True)
-    
+
     return metadata
-    
+
 def build_meta_singleworm_quiescence(root_results,glob_keyword,recursive=False):
     if recursive:
         result_files = [file for file in Path(root_results).rglob(glob_keyword)]
     else:
         result_files = [file for file in Path(root_results).glob(glob_keyword)]
-        
+
     metadata = []
     for file in result_files:
         strain = file.parts[-2]
         chanel = file.stem.split('_')[1]
         date = file.stem.split('_')[2]
-        
+
         tmp_meta = pd.DataFrame([[strain,chanel,date,str(file)]],columns=['strain','chanel','date','filename'])
         metadata.append(tmp_meta)
-        
+
     metadata = pd.concat(metadata,axis=0,sort=False)
     metadata.reset_index(drop=True,inplace=True)
-        
+
     return metadata
 
 
 def match_metadata_and_clean_features(features,filenames,metadata,feat_meta_cols=['file_id']):
-    
+
     ## The features dataframe is expected to have all the feat_meta_cols columns
     for ft in feat_meta_cols:
         if ft not in features.columns:
             raise KeyError('The feature dataframe does not have a \'{}\' column.'.format(ft))
-    
-    ## The filenames dataframe is expected to have a 'file_id' column and a 'file_name' column
-    for ft in ['file_id','file_name']:
+
+    ## The filenames dataframe is expected to have a 'file_id' column and a 'filename' column
+    for ft in ['file_id','filename']:
         if ft not in filenames.columns:
             raise KeyError('The filenames dataframe does not have a \'{}\' column.'.format(ft))
-            
-    ## The metadata dataframe is expected to have a 'file_name' column
-    if 'file_name' not in metadata.columns:
-        raise KeyError('The metadata dataframe does not have a \'file_name\' column.')
-        
+
+    ## The metadata dataframe is expected to have a 'filename' column
+    if 'filename' not in metadata.columns:
+        raise KeyError('The metadata dataframe does not have a \'filename\' column.')
+
     # Match all metadata to features dataframe
     feat_metadata = features.loc[:,feat_meta_cols].copy()
-    
-    feat_metadata.insert(0,'file_name',feat_metadata['file_id'].map(dict(filenames[['file_id','file_name']].values)))
-    
+
+    feat_metadata.insert(0,'filename',feat_metadata['file_id'].map(dict(filenames[['file_id','filename']].values)))
+
     for dt in metadata.columns.difference(feat_metadata.columns):
-        feat_metadata.insert(0,dt,feat_metadata['file_name'].map(dict(metadata[['file_name',dt]].values)))
-    
-    # Clean features    
+        feat_metadata.insert(0,dt,feat_metadata['filename'].map(dict(metadata[['filename',dt]].values)))
+
+    # Clean features
     features = features[features.columns.difference(feat_meta_cols)]
-    
+
     return feat_metadata,features
