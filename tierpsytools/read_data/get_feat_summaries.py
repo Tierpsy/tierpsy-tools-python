@@ -190,7 +190,7 @@ def write_all_feat_summaries_to_file(
 
     if save_to is None:
         save_to = root_dir
-    save_to.mkdir(exist_ok=True)
+    Path(save_to).mkdir(exist_ok=True)
 
     log_dir = Path(save_to)/'feat_summaries_error_log'
     log_dir.mkdir(exist_ok=True)
