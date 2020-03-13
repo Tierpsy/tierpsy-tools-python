@@ -49,11 +49,21 @@ def get_filenames(root_dir):
 
     return filenames
 
-def read_feat_stats(filename):
+def read_feat_stats(filename, log_dir=None):
     """
     Read the feature stats from a *featuresN.hdf5 file from tierpsy.
     """
-    feat = pd.read_hdf(filename, key='features_stats')
+    from time import time
+    from pathlib import Path
+
+    try:
+        feat = pd.read_hdf(filename, key='features_stats')
+    except KeyError:
+        if log_dir is not None:
+            with open(Path(log_dir)/'error_{:6.6f}.err'.format(time()), 'w') as fid:
+                fid.write('KeyError: there is no features_stats dataframe in file:\n')
+                fid.write(filename)
+        return pd.DataFrame([]), None
 
     if feat.empty:
         return feat, None
@@ -180,6 +190,10 @@ def write_all_feat_summaries_to_file(
 
     if save_to is None:
         save_to = root_dir
+    save_to.mkdir(exist_ok=True)
+
+    log_dir = Path(save_to)/'feat_summaries_error_log'
+    log_dir.mkdir(exist_ok=True)
 
     # Create full file paths for the feature summaries file and the filenames
     # summaries file
@@ -206,7 +220,7 @@ def write_all_feat_summaries_to_file(
     for ifl, (fileid, file) in enumerate(filenames[['file_id','filename']].values):
         file_time = time()
         print('Reading features stats from file {} of {}'.format(ifl+1,filenames.shape[0]))
-        ft, is_split_fov = read_feat_stats(file)
+        ft, is_split_fov = read_feat_stats(file, log_dir=log_dir)
 
         if ft.empty:
             filenames.loc[filenames['file_id']==fileid, 'is_good'] = False
@@ -234,8 +248,9 @@ def write_all_feat_summaries_to_file(
 
 if __name__=="__main__":
 
-    root_dir = '/Volumes/behavgenom$/Ida/Data/Hydra/SyngentaStrainScreen/Results/'
-    write_all_feat_summaries_to_file(root_dir,drop_ventral=True)
+    # root_dir = '/Volumes/behavgenom$/Ida/Data/Hydra/SyngentaStrainScreen/Results/'
+    # write_all_feat_summaries_to_file(root_dir,drop_ventral=True)
 
-    # filename = '/Volumes/behavgenom$/Ida/Data/Hydra/SyngentaStrainScreen/Results/20200129/run1_syngenta_bluelight_20200129_141526.22956831/metadata_featuresN.hdf5'
-    # feat = read_feat_stats(filename)
+    # filename = '/Volumes/behavgenom$/Ida/Data/Hydra/SyngentaStrainScreen/Results/20200129/run1_syngenta_bluelight_20200129_141526.22956831/metadata_skeletons.hdf5'
+    filename = '/Volumes/behavgenom$/Ida/Data/Hydra/SyngentaStrainScreen/Results/20200129/run1_syngenta_bluelight_20200129_141526.22956831/metadata_featuresN.hdf5'
+    feat, is_split = read_feat_stats(filename, log_dir='.')
