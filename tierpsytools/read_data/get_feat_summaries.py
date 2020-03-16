@@ -159,11 +159,24 @@ def select_and_sort_columns(df, selected_feat, id_cols):
 
     return df
 
+def remove_files_already_read(filenames, f2):
+
+    finished_files = pd.read_csv(f2, index_col=None)
+
+    filenames = filenames[~filenames['filename'].isin(
+        finished_files['filename'].to_list()
+        )]
+
+    return filenames
 
 def write_all_feat_summaries_to_file(
-        root_dir, drop_ventral=True, save_to=None,
+        root_dir,
+        drop_ventral=True,
+        save_to=None,
         feat_sum_filename='features_summaries_tierpsy_plate.csv',
-        filenames_sum_filename='filenames_summaries_tierpsy_plate.csv'):
+        filenames_sum_filename='filenames_summaries_tierpsy_plate.csv',
+        append_to_existing=False
+        ):
     """
     Same as get_all_feat_summaries BUT grows csv file instead of growing a
     dataframe and keeping it in memory (more efficient when you have many files
@@ -200,6 +213,13 @@ def write_all_feat_summaries_to_file(
     f1 = Path(save_to) / feat_sum_filename
     f2 = Path(save_to) / filenames_sum_filename
 
+    if append_to_existing and not (f1.exists() and f2.exists()):
+        raise ValueError('There are no existing summaries files to append')
+    elif not append_to_existing and (f1.exists() and f2.exists()):
+        raise ValueError(
+            'Summary files with this name already exist at this location.'+
+            'Remove or rename the existing files to run this function.')
+
     # Get all tierpsy features names that we expect from auxiliary files
     feat_names = pd.read_csv(
         Path(AUX_FILES_DIR) / 'tierpsy_features_full_names.csv', header=None,
@@ -208,13 +228,17 @@ def write_all_feat_summaries_to_file(
         feat_names = drop_ventrally_signed_names(feat_names)
 
     # Write the headers in the features and filenames summaries file
-    with open(f1, 'w') as fid:
-        fid.write(','.join(feat_id_cols + feat_names)+"\n")
-    with open(f2, 'w') as fid:
-        fid.write(','.join(['file_id', 'filename', 'is_good'])+"\n")
+    if not append_to_existing:
+        with open(f1, 'w') as fid:
+            fid.write(','.join(feat_id_cols + feat_names)+"\n")
+        with open(f2, 'w') as fid:
+            fid.write(','.join(['file_id', 'filename', 'is_good'])+"\n")
 
     # Create the filenames summaries dataframe
     filenames = get_filenames(root_dir)
+
+    if append_to_existing:
+        filenames = remove_files_already_read(filenames, f2)
 
     start_time=time()
     for ifl, (fileid, file) in enumerate(filenames[['file_id','filename']].values):
