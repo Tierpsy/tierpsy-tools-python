@@ -58,10 +58,10 @@ def read_feat_stats(filename, log_dir=None):
 
     try:
         feat = pd.read_hdf(filename, key='features_stats')
-    except KeyError:
+    except:
         if log_dir is not None:
             with open(Path(log_dir)/'error_{:6.6f}.err'.format(time()), 'w') as fid:
-                fid.write('KeyError: there is no features_stats dataframe in file:\n')
+                fid.write('Error: file empty or there is no features_stats dataframe in file:\n')
                 fid.write(filename)
         return pd.DataFrame([]), None
 
