@@ -37,15 +37,24 @@ class ExtraDataReader(object):
     """
 
     def __init__(self, filename):
-        self.store = imgstore.new_for_filename(str(filename))
+        try:
+            self.store = imgstore.new_for_filename(str(filename))
+        except:
+            self.store = None
+        self.filename = filename
+        print(self.filename)
         self.ext = '.extra_data.json'
         self.extra_data = None
 
     def _get_extra_data(self):
         """Only called by the __init__"""
-        extra_data_fnames = [chunk+self.ext
-                             for (_, chunk)
-                             in self.store._chunk_n_and_chunk_paths]
+        if self.store is None:
+            extra_data_fnames = list(self.filename.parent.glob('*' + self.ext))
+            print(extra_data_fnames)
+        else:
+            extra_data_fnames = [chunk+self.ext
+                                 for (_, chunk)
+                                 in self.store._chunk_n_and_chunk_paths]
         dfs = []
         for extra_data in extra_data_fnames:
             with open(extra_data) as fid:
@@ -139,8 +148,13 @@ def plot_imagingset_sensordata(setname, setdata):
         edr_df.append(df)
         # read first frame as well
         if row['channel'] == 'Ch1':
-            frame = edr.store.get_next_image()[0]
-            edr.store.close()
+            try:
+                frame = edr.store.get_next_image()[0]
+                edr.store.close()
+                is_first_frame = True
+            except:
+                print('No file found')
+                is_first_frame = False
     # make one big df
     edr_df = pd.concat(edr_df, axis=0, ignore_index=True)
 
@@ -262,7 +276,7 @@ def check_hydra_sensordata(path_to_imgstores, is_makereport=True):
 
 def hydra_sensordata_report():
     # input parser
-    parser = argparse.ArgumentParser(description=())
+    parser = argparse.ArgumentParser()
     parser.add_argument('folder_path',
                         type=str)
     parser.add_argument('-n', '--no-pdf',
