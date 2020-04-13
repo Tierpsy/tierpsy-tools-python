@@ -21,8 +21,8 @@ def read_tierpsy_feat_summaries(feat_file,filenames_file,drop_ventral=True):
     """
     from tierpsytools.feature_processing.filter_features import drop_ventrally_signed
 
-    filenames = pd.read_csv(filenames_file)
-    features = pd.read_csv(feat_file,index_col=1)
+    filenames = pd.read_csv(filenames_file, comment='#')
+    features = pd.read_csv(feat_file,index_col=1, comment='#')
 
     if drop_ventral:
         features = drop_ventrally_signed(features)
@@ -161,11 +161,15 @@ def select_and_sort_columns(df, selected_feat, id_cols):
 
 def remove_files_already_read(filenames, f2):
 
-    finished_files = pd.read_csv(f2, index_col=None)
+    finished_files = pd.read_csv(f2, index_col=None, comment='#')
 
     filenames = filenames[~filenames['filename'].isin(
         finished_files['filename'].to_list()
         )]
+
+    filenames.reset_index(drop=True, inplace=True)
+    filenames['file_id'] = filenames.index.to_list() + \
+        finished_files['file_id'].max()
 
     return filenames
 
@@ -198,6 +202,7 @@ def write_all_feat_summaries_to_file(
     from tierpsytools.feature_processing.filter_features import drop_ventrally_signed
     from tierpsytools import AUX_FILES_DIR
     from pathlib import Path
+    import pdb
 
     feat_id_cols = ['file_id', 'well_name']
 
@@ -221,14 +226,18 @@ def write_all_feat_summaries_to_file(
             'Remove or rename the existing files to run this function.')
 
     # Get all tierpsy features names that we expect from auxiliary files
-    feat_names = pd.read_csv(
-        Path(AUX_FILES_DIR) / 'tierpsy_features_full_names.csv', header=None,
-        index_col=None)[0].to_list()
-    if drop_ventral:
-        feat_names = drop_ventrally_signed_names(feat_names)
+    if append_to_existing:
+        feat_names = pd.read_csv(
+            f1, index_col=None, nrows=1, comment='#').columns.difference(
+                feat_id_cols).to_list()
+    else:
+        feat_names = pd.read_csv(
+            Path(AUX_FILES_DIR) / 'tierpsy_features_full_names.csv', header=None,
+            index_col=None)[0].to_list()
+        if drop_ventral:
+            feat_names = drop_ventrally_signed_names(feat_names)
 
-    # Write the headers in the features and filenames summaries file
-    if not append_to_existing:
+        # Write the headers in the features and filenames summaries file
         with open(f1, 'w') as fid:
             fid.write(','.join(feat_id_cols + feat_names)+"\n")
         with open(f2, 'w') as fid:
@@ -240,6 +249,8 @@ def write_all_feat_summaries_to_file(
     if append_to_existing:
         filenames = remove_files_already_read(filenames, f2)
 
+    # pdb.set_trace()
+
     start_time=time()
     for ifl, (fileid, file) in enumerate(filenames[['file_id','filename']].values):
         file_time = time()
@@ -249,10 +260,7 @@ def write_all_feat_summaries_to_file(
         if ft.empty:
             filenames.loc[filenames['file_id']==fileid, 'is_good'] = False
         else:
-            if drop_ventral:
-                ft = drop_ventrally_signed(ft)
-
-            # Write the feature summaries to file (only is is_good)
+            # Write the feature summaries to file (only if is_good)
             ft['file_id'] = fileid
             ft = select_and_sort_columns(ft, feat_names, feat_id_cols)
 

@@ -89,7 +89,7 @@ def compile_columns(file_list):
 
     # Compare number of columns
     ncols = [df.shape[1] for df in dfsamples]
-    if not all(n=ncols[0] for n in ncols):
+    if not all([n==ncols[0] for n in ncols]):
         warnings.warn('The dataframes to compile do not have the same number of columns.')
 
     # Compile all columns
@@ -103,6 +103,8 @@ def write_columns_header(columns, filename):
     return
 
 def compile_tierpsy_summaries(feat_files, fname_files, compiled_feat_file, compiled_fname_file):
+
+    import pdb
 
     check_summary_type(feat_files, fname_files)
 
@@ -134,7 +136,10 @@ def compile_tierpsy_summaries(feat_files, fname_files, compiled_feat_file, compi
         with open(compiled_fname_file, 'a') as fid:
             fnames.to_csv(fid, header=False, index=False)
 
-        feat = pd.read_csv(feat_fl, header=0, comment='#')
+        try:
+            feat = pd.read_csv(feat_fl, header=0, comment='#')
+        except:
+            pdb.set_trace()
         feat['file_id'] = feat['file_id'] + counter
         feat = pd.concat([pd.DataFrame(columns=feat_columns), feat], axis=0, sort=False)
         with open(compiled_feat_file, 'a') as fid:
