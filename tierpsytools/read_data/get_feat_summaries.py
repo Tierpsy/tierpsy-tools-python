@@ -169,7 +169,7 @@ def remove_files_already_read(filenames, f2):
 
     filenames.reset_index(drop=True, inplace=True)
     filenames['file_id'] = filenames.index.to_list() + \
-        finished_files['file_id'].max()
+        finished_files['file_id'].max() + 1
 
     return filenames
 
@@ -229,7 +229,11 @@ def write_all_feat_summaries_to_file(
     if append_to_existing:
         feat_names = pd.read_csv(
             f1, index_col=None, nrows=1, comment='#').columns.difference(
-                feat_id_cols).to_list()
+                feat_id_cols, sort=False).to_list()
+        with open(f1, 'a') as fid:
+            fid.write("\n")
+        with open(f2, 'a') as fid:
+            fid.write("\n")
     else:
         feat_names = pd.read_csv(
             Path(AUX_FILES_DIR) / 'tierpsy_features_full_names.csv', header=None,
