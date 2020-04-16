@@ -15,7 +15,7 @@ def drop_ventrally_signed(feat):
     
     ventr_feat = [ft.replace('_abs','') for ft in abs_feat]
     
-    feat = feat[feat.columns.difference(ventr_feat)]
+    feat = feat[feat.columns.difference(ventr_feat, sort=False)]
     
     return feat
 

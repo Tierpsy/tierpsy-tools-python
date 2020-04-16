@@ -141,7 +141,7 @@ def remove_drugs_with_low_effect_univariate(
                 selector.fit(X[y==dose], y[y==dose])
                 n_sign_feat.append(np.sum(selector.get_support()))
 
-            if np.any(n_sign_feat>threshold*n_feat):
+            if np.any([n>threshold*n_feat for n in n_sign_feat]):
                 significant_drugs.append(drug)
 
     # If DMSO was in drug list, include it in the final dataframe
