@@ -36,7 +36,6 @@ class scalingClass():
     """
     
     ## Initiate class
-    
     def __init__(self,function='standardize',axis=None,norm='l2'):
         ## Define class attributes
         self.scaling = function
