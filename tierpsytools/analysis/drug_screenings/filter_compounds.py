@@ -138,7 +138,7 @@ def remove_drugs_with_low_effect_univariate(
             for idose, dose in enumerate(y.unique()):
                 if dose == 0:
                     continue
-                selector.fit(X[y==dose], y[y==dose])
+                selector.fit(X[np.isin(y,[0,dose])], y[np.isin(y,[0,dose])])
                 n_sign_feat.append(np.sum(selector.get_support()))
 
             if np.any([n>threshold*n_feat for n in n_sign_feat]):
@@ -161,7 +161,7 @@ def remove_drugs_with_low_effect_univariate(
 
 def remove_drugs_with_low_effect_multivariate(
         feat, meta, signif_level=0.05,
-        cov_estimator = 'RobustCov',
+        cov_estimator = 'EmpiricalCov',
         drugname_column = 'drug_type',
         dose_column = 'drug_dose',
         keep_names = ['DMSO', 'NoCompound'],
@@ -207,6 +207,7 @@ def remove_drugs_with_low_effect_multivariate(
 
     drug_names = meta[drugname_column].unique()
 
+    mah_dist = {}
     signif_effect_drugs = []
     for idr, drug in enumerate(drug_names):
         if drug in keep_names:
@@ -222,6 +223,7 @@ def remove_drugs_with_low_effect_multivariate(
         X = X.groupby(by='dose').mean()
 
         md2 = estimator.mahalanobis(X)
+        mah_dist[drug] = md2
 
         nft = feat.shape[1]
 
@@ -240,6 +242,6 @@ def remove_drugs_with_low_effect_multivariate(
     if return_nonsignificant:
         return feat, meta, list(
             set(drug_names).difference(set(signif_effect_drugs))
-            )
+            ), mah_dist
     else:
         return feat, meta
