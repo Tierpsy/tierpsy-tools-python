@@ -9,7 +9,7 @@ Created on Fri May 24 17:34:22 2019
 from pathlib import Path
 import pandas as pd
 
-def get_digit(string,dtype=float):
+def get_digit(string, dtype=float):
     if dtype == int:
         fun = int
     else:
@@ -21,14 +21,12 @@ def get_digit(string,dtype=float):
 
     return digit
 
-def build_meta_cendr(root_results,glob_keyword,recursive=False):
-    if recursive:
-        result_files = [file for file in Path(root_results).rglob(glob_keyword)]
-    else:
-        result_files = [file for file in Path(root_results).glob(glob_keyword)]
+def meta_cendr_from_filenames(filenames):
+
+    filenames = [Path(file) for file in filenames]
 
     metadata = []
-    for file in result_files:
+    for file in filenames:
         strain = file.stem.split('_')[0]
         n_worms = get_digit(file.stem.split('_')[1],dtype=int)
         set_n = get_digit(file.stem.split('_')[3],dtype=int)
@@ -44,21 +42,29 @@ def build_meta_cendr(root_results,glob_keyword,recursive=False):
 
     return metadata
 
-def build_meta_singleworms(root_results,glob_keyword,keep_all_keywords=None,keep_any_keywords=None,recursive=False):
-    import numpy as np
-
+def build_meta_cendr(root_results, glob_keyword, recursive=False):
     if recursive:
         result_files = [file for file in Path(root_results).rglob(glob_keyword)]
     else:
         result_files = [file for file in Path(root_results).glob(glob_keyword)]
 
+    metadata = meta_cendr_from_filenames(result_files)
+
+    return metadata
+
+def meta_singleworms_from_filenames(
+        filenames, keep_all_keywords=None, keep_any_keywords=None
+        ):
+
+    filenames = [Path(file) for file in filenames]
+
     metadata = []
-    for file in result_files:
+    for file in filenames:
         if keep_all_keywords is not None:
-            if not np.all([key in str(file) for key in keep_all_keywords]):
+            if not all([key in str(file) for key in keep_all_keywords]):
                 continue
         if keep_any_keywords is not None:
-            if not np.any([key in str(file) for key in keep_any_keywords]):
+            if not any([key in str(file) for key in keep_any_keywords]):
                 continue
         strain = file.parts[-6]
         ventral_direction = file.parts[-2]
@@ -76,14 +82,29 @@ def build_meta_singleworms(root_results,glob_keyword,keep_all_keywords=None,keep
 
     return metadata
 
-def build_meta_singleworm_quiescence(root_results,glob_keyword,recursive=False):
+def build_meta_singleworms(
+        root_results, glob_keyword,
+        keep_all_keywords=None, keep_any_keywords=None,
+        recursive=False
+        ):
+
     if recursive:
         result_files = [file for file in Path(root_results).rglob(glob_keyword)]
     else:
         result_files = [file for file in Path(root_results).glob(glob_keyword)]
 
+    metadata = meta_singleworms_from_filenames(
+        result_files, keep_all_keywords=keep_all_keywords,
+        keep_any_keywords=keep_any_keywords)
+
+    return metadata
+
+def meta_singleworm_quiescence_from_filenames(filenames):
+
+    filenames = [Path(file) for file in filenames]
+
     metadata = []
-    for file in result_files:
+    for file in filenames:
         strain = file.parts[-2]
         chanel = file.stem.split('_')[1]
         date = file.stem.split('_')[2]
@@ -96,8 +117,52 @@ def build_meta_singleworm_quiescence(root_results,glob_keyword,recursive=False):
 
     return metadata
 
+def build_meta_singleworm_quiescence(root_results,glob_keyword,recursive=False):
+    if recursive:
+        result_files = [file for file in Path(root_results).rglob(glob_keyword)]
+    else:
+        result_files = [file for file in Path(root_results).glob(glob_keyword)]
 
-def match_metadata_and_clean_features(features,filenames,metadata,feat_meta_cols=['file_id']):
+    metadata = meta_singleworm_quiescence_from_filenames(result_files)
+
+    return metadata
+
+
+def meta_syngenta_archive_from_filenames(filenames):
+    import pdb
+
+    filenames = [str(file).replace('No_Compound','NoCompound') for file in filenames]
+
+    filenames = [Path(file) for file in filenames]
+
+    metadata = []
+    for file in filenames:
+        tmp_meta = dict()
+        tmp_meta['strain'] = [file.stem.split('_')[0]]
+        tmp_meta['nworms'] = [get_digit(file.stem.split('_')[1], dtype=int)]
+        tmp_meta['drug_name'] = [file.stem.split('_')[2]]
+        try:
+            tmp_meta['drug_dose'] = [float(file.stem.split('_')[3])]
+        except:
+            pdb.set_trace()
+        tmp_meta['set'] = [get_digit(file.stem.split('_')[4], dtype=int)]
+        tmp_meta['position'] = [get_digit(file.stem.split('_')[5], dtype=int)]
+        tmp_meta['channel'] = [get_digit(file.stem.split('_')[6], dtype=int)]
+        tmp_meta['date'] = [file.stem.split('_')[7]]
+        tmp_meta['filename'] = [str(file)]
+
+        tmp_meta = pd.DataFrame(tmp_meta)
+        metadata.append(tmp_meta)
+
+    metadata = pd.concat(metadata,axis=0,sort=False)
+    metadata.reset_index(drop=True,inplace=True)
+
+    return metadata
+
+
+def match_metadata_and_clean_features(
+        features, filenames, metadata, feat_meta_cols=['file_id']
+        ):
 
     ## The features dataframe is expected to have all the feat_meta_cols columns
     for ft in feat_meta_cols:
