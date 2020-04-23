@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from time import time
 
+
 def get_filenames(root_dir):
     """
     Find all *featuresN.hdf5 files under root_dir
@@ -23,26 +24,37 @@ def get_filenames(root_dir):
     file_list = Path(root_dir).rglob('*featuresN.hdf5')
     file_list = [str(file) for file in file_list]
 
-    filenames = pd.DataFrame(file_list,columns=['file_name'])
-    filenames.insert(0,'file_id',np.arange(len(file_list)))
+    filenames = pd.DataFrame(file_list, columns=['file_name'])
+    filenames.insert(0, 'file_id', np.arange(len(file_list)))
 
     return filenames
 
-def read_timeseries(filename, names=None):
+
+def read_timeseries(filename, names=None, only_wells=None):
     """
     Read timeseries from a *featuresN.hdf5 file from tierpsy.
     Input:
         filename = name of file
-        names = names of timeseries to read. If none, all timeseries will be read
+        names = names of timeseries to read.
+                If none, all timeseries will be read
+        only_wells = list of well_names to read from the featuresN.hdf5 file.
+                     If None, the timeseries will not be filtered by well
+                     (good for legacy data)
     """
-
+    assert isinstance(only_wells, list), 'only_wells must be a list'
+    assert all(isinstance(well, str) for well in only_wells), \
+        'only_wells must be a list'
     with pd.HDFStore(filename, 'r') as f:
-        if names is None:
-            names = f['timeseries_data'].columns.to_list()
+        if only_wells is None:
+            series = f['timeseries_data']
+        else:
+            query_str = 'well_name in {}'.format(only_wells)
+            series = f['timeseries_data'].query(query_str)
+    if names is None:
+        return series
+    else:
+        return series[names]
 
-        series = f['timeseries_data'][names]
-
-    return series
 
 def select_filenames(filenames, select_keywords, drop_keywords):
     """
@@ -62,10 +74,10 @@ def select_filenames(filenames, select_keywords, drop_keywords):
         return filenames
 
     filenames['_relative_path'] = filenames['file_name'].apply(
-        lambda x: relpath(x,root_dir))
+        lambda x: relpath(x, root_dir))
 
     if select_keywords is not None:
-        if isinstance(select_keywords,str):
+        if isinstance(select_keywords, str):
             select_keywords = [select_keywords]
 
         keep = filenames['_relative_path'].apply(
@@ -73,10 +85,10 @@ def select_filenames(filenames, select_keywords, drop_keywords):
                 True if np.any([kwrd in x for kwrd in select_keywords])
                 else False)
 
-        filenames = filenames.loc[keep,:]
+        filenames = filenames.loc[keep, :]
 
     if drop_keywords is not None:
-        if isinstance(select_keywords,str):
+        if isinstance(select_keywords, str):
             drop_keywords = [drop_keywords]
 
         drop = filenames['_relative_path'].apply(
@@ -84,15 +96,16 @@ def select_filenames(filenames, select_keywords, drop_keywords):
                 False if np.any([kwrd in x for kwrd in drop_keywords])
                 else True)
 
-        filenames = filenames.loc[drop,:]
+        filenames = filenames.loc[drop, :]
 
     filenames.drop(columns=['_relative_path'])
     filenames.reset_index(drop=True)
 
     return filenames
 
+
 def get_timeseries(root_dir, select_keywords=None, drop_keywords=None,
-                   names=None):
+                   names=None, only_wells=None):
     """
     Get timeseries data from *_featuresN files under a root directory.
     Input:
@@ -103,6 +116,9 @@ def get_timeseries(root_dir, select_keywords=None, drop_keywords=None,
                             these keywords in the file path
         names = timeseries names to exctact. If None, all timeseries data will
                 be returned
+        only_wells = list of well_names to read from the featuresN.hdf5 file.
+                     If None, the timeseries will not be filtered by well
+            (        good for legacy data)
     Return:
         filenames = dataframe with filenames and file_ids
         timeseries =
@@ -112,23 +128,28 @@ def get_timeseries(root_dir, select_keywords=None, drop_keywords=None,
     filenames = select_filenames(filenames, select_keywords, drop_keywords)
 
     data = {}
-    start_time=time()
-    for ifl,(fileid,file) in enumerate(filenames[['file_id','file_name']].values):
+    start_time = time()
+    for ifl, (fileid, file) in enumerate(
+            filenames[['file_id', 'file_name']].values):
         file_time = time()
-        print('Reading timeseries from file {} of {}'.format(ifl+1,filenames.shape[0]))
-        timeseries = read_timeseries(file)
+        print('Reading timeseries from file {} of {}'.format(
+            ifl+1, filenames.shape[0]))
+        timeseries = read_timeseries(file, only_wells=only_wells)
         data[fileid] = timeseries
         print('File read in {} sec.'.format(time()-file_time))
     print('Done reading in {} sec.'.format(time()-start_time))
 
+    return filenames, data
 
-    return filenames,data
 
-if __name__=="__main__":
+if __name__ == "__main__":
 
-    root_dir = "/Volumes/behavgenom$/Adam/Screening/Syngenta_multi_dose/18-11-13-SYN/Results"
+    root_dir = ("/Volumes/behavgenom$/Adam/Screening/"
+                + "Syngenta_multi_dose/18-11-13-SYN/Results")
 
     filenames = get_filenames(root_dir)
     filenames = select_filenames(filenames, None, ['Set2'])
-    # feat_file = "/Volumes/behavgenom$/Adam/Screening/Syngenta_multi_dose/18-11-13-SYN/Results/18-11-13_SYN_AMR_1/Set2/Set2_Ch2_13112018_192908_featuresN.hdf5"
+    feat_file = ("/Volumes/behavgenom$/Adam/Screening/Syngenta_multi_dose/"
+                 + "18-11-13-SYN/Results/18-11-13_SYN_AMR_1/Set2/"
+                 + "Set2_Ch2_13112018_192908_featuresN.hdf5")
     # series = read_timeseries(feat_file)

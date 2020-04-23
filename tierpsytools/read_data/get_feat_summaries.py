@@ -9,7 +9,38 @@ import pandas as pd
 import numpy as np
 from time import time
 
-def read_tierpsy_feat_summaries(feat_file,filenames_file,drop_ventral=True):
+
+def count_metadata_lines_in_csv(fname):
+    """count_metadata_lines_in_csv
+    Return the number of lines starting with # in the input file.
+    e.g. if there are 3 lines starting with #, return 3.
+    Then line 3 is the first non-metadata line to read (because lines
+    are indexed from 0)"""
+    n_metadata_lines = 0
+    with open(fname, 'r') as fid:
+        for line in fid:
+            if line.startswith('#'):
+                n_metadata_lines += 1
+            else:
+                return n_metadata_lines
+
+
+def create_featsdtypesdict(fname):
+    featnames = pd.read_csv(fname, comment='#', nrows=0).columns.to_list()
+    dtypes_dict = {}
+    dtypes_dict['file_id'] = np.int64
+    if 'well_name' in featnames:
+        dtypes_dict['well_name'] = str
+    if 'is_good_well' in featnames:
+        dtypes_dict['is_good_well'] = bool
+    for feat in featnames:
+        if feat not in ['file_id', 'well_name', 'is_good_well']:
+            dtypes_dict[feat] = np.float32
+    return dtypes_dict
+
+
+def read_tierpsy_feat_summaries(
+        feat_file, filenames_file, drop_ventral=True, asfloat32=False):
     """
     Read the existing feature summaries and filenames summaries files produced
     by tierpsy into dataframes.
@@ -19,15 +50,25 @@ def read_tierpsy_feat_summaries(feat_file,filenames_file,drop_ventral=True):
         filenames_file = path to filenames summaries file
         drop_ventral = if True the ventrally signed features are dropped
     """
-    from tierpsytools.feature_processing.filter_features import drop_ventrally_signed
+
+    from tierpsytools.feature_processing.filter_features import (
+        drop_ventrally_signed)
+
+    if asfloat32:
+        dtypes_dict = create_featsdtypesdict(feat_file)
+    else:
+        dtypes_dict = None
 
     filenames = pd.read_csv(filenames_file, comment='#')
-    features = pd.read_csv(feat_file,index_col=1, comment='#')
+    features = pd.read_csv(feat_file, index_col=1,
+                           comment='#', dtype=dtypes_dict)
+
 
     if drop_ventral:
         features = drop_ventrally_signed(features)
 
-    return filenames,features
+    return filenames, features
+
 
 def get_filenames(root_dir):
     """
@@ -43,8 +84,8 @@ def get_filenames(root_dir):
     file_list = Path(root_dir).rglob('*featuresN.hdf5')
     file_list = [str(file) for file in file_list]
 
-    filenames = pd.DataFrame(file_list,columns=['filename'])
-    filenames.insert(0,'file_id',np.arange(len(file_list)))
+    filenames = pd.DataFrame(file_list, columns=['filename'])
+    filenames.insert(0, 'file_id', np.arange(len(file_list)))
     filenames['is_good'] = True
 
     return filenames
