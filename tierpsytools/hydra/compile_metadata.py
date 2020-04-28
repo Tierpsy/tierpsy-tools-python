@@ -17,7 +17,7 @@ import itertools
 #%%
 def merge_robot_metadata(
         sourceplates_file, randomized_by='column', saveto=None,
-        drug_by_column=True, 
+        drug_by_column=True,
         compact_drug_plate=False,
         del_if_exists=False
         ):
@@ -38,13 +38,13 @@ def merge_robot_metadata(
                      'well'/'source_well' = shuffled well-by-well
             The parameter randomized_by is expected to be a field in the
             sourceplates file.
-            
+
         drug_by_column: Bool, if robot randomised by column and each column has the
         same drug at a single concentration (Eg Dec syngenta screen)
-        
-        compact_drug_plate: Bool, if each well is a different drug as a 
+
+        compact_drug_plate: Bool, if each well is a different drug as a
         different concentration (eg Jan syngenta strain screen)
-        
+
         saveto: path to .csv file
             The full path of the file where the robot metadata will be saved.
             If None, the robot metadata dataframe is not saved to disk.
@@ -141,14 +141,14 @@ def merge_robot_metadata(
                     left_on=['source_plate_id', randomized_by],
                     right_on=['source_plate_id',randomized_by]
                     )
-        
+
             # get unique imaging_plate_id
             out_meta['imaging_plate_id'] = out_meta[
                     ['source_plate_id','destination_slot']
                     ].apply(
                         lambda x: 'rr{:02}_sp{:02}_ds{:02}'.format(n_log+1, *x),
                         axis=1)
-            
+
         elif compact_drug_plate:
             out_meta = pd.merge(
                     source, robotlog, how='outer',
@@ -177,7 +177,7 @@ def merge_robot_metadata(
             leading_cols = ['source_plate_id',
                             'destination_slot']
         end_cols = ['robot_runlog_id', 'robot_runlog_filename']
-        
+
         out_meta = out_meta[
                 leading_cols
                 + list(out_meta.columns.difference(leading_cols + end_cols))
@@ -290,16 +290,16 @@ def convert_bad_wells_lut(bad_wells_csv):
     Function for converting bad_wells_csv for input into dataframes
     Input:
     bad_wells_csv -.csv file listing imaging_plate_id and well_name
-    
+
     Output:
-    bad_wells_df - DataFrame with columns imaging_plate_id, well_name and 
+    bad_wells_df - DataFrame with columns imaging_plate_id, well_name and
     is_bad_well=True
     """
-    
+
     bad_wells_df = pd.read_csv(bad_wells_csv)
                                          # encoding='utf-8-sig')
     bad_wells_df['is_bad_well'] = True
-    
+
     return bad_wells_df
 
 
@@ -344,13 +344,13 @@ def merge_robot_wormsorter(day_root_dir,
                           + 'If you want to recompile the plate metadata,'
                           + 'rename or delete the exisiting file.')
             return None
-    
+
     robot_metadata.rename(columns={'destination_well': 'well_name'},
                           inplace=True)
 
     # parse out bad wells in robot_metadata into new column
     print('Finding any bad wells noted in the sourceplates and robot metadata')
-    
+
     bad_source_lut = robot_metadata[robot_metadata['bad_wells'].notna()][
             ['bad_wells', 'imaging_plate_id']].drop_duplicates()
 
@@ -363,8 +363,8 @@ def merge_robot_wormsorter(day_root_dir,
                                      0: 'imaging_plate_id'},
                             inplace=True)
         bad_well_lut['is_bad_well'] = True
-    
-    
+
+
     else:
         print('No bad wells marked in the source plates file')
         bad_well_lut = pd.DataFrame()
@@ -499,14 +499,15 @@ def add_imgstore_name(
     date_of_runs = metadata['date_yyyymmdd'].astype(str).values[0]
     date_in_dir = re.findall(r'(20\d{6})',raw_day_dir.stem)
     if len(date_in_dir)==1 and date_of_runs != date_in_dir[0]:
-        warnings.warn('\nThe date in the RawVideos day directory does not '
-                      +'match the date_yyyymmdd in the day metadata '
-                      +'dataframe. Imgstore names cannot be added to the '
-                      +'metadata.\nPlease check the dates and try again.')
+        warnings.warn(
+            '\nThe date in the RawVideos day directory does not match ' +
+            'the date_yyyymmdd in the day metadata dataframe. '
+            'Imgstore names cannot be added to the metadata.\n'+
+            'Please check the dates and try again.')
         return metadata
 
     # add camera serial number to metadata
-    metadata = get_camera_serial(metadata,n_wells=n_wells)
+    metadata = get_camera_serial(metadata, n_wells=n_wells)
 
     # get imgstore full paths = raw video directories that contain a
     # metadata.yaml file and match the run and camera number
@@ -514,7 +515,7 @@ def add_imgstore_name(
             ['imaging_run_number','camera_serial']
             ].drop_duplicates()
     MAP2PATH['run_name'] = metadata['imaging_run_number'].apply(
-            lambda x: 'run{}'.format(x)
+            lambda x: 'run{}_'.format(x)
             )
     #print('There are {} videos expected from metadata in {}.\n'.format(
     #    MAP2PATH.shape[0],aux_day_dir))
@@ -528,7 +529,7 @@ def add_imgstore_name(
             ].apply(
                 lambda x: [file
                            for file in file_list
-                           if np.all([str(ix) in str(file)
+                           if np.all([str(ix) in str(file.relative_to(raw_day_dir))
                            for ix in x])],
                 axis=1)
 
@@ -754,17 +755,17 @@ def get_day_metadata(
 
 
 def day_metadata_check(day_metadata, day_root_dir, plate_size=96):
-    
+
     """@author: ibarlow
-    Function to check that the day_metadata is the correct size and has 
+    Function to check that the day_metadata is the correct size and has
     all the wells in triplicate
     Input:
         day_metadata - dataframe of the compiled metadata
         day_root_dir - directory to save output list to
-        
+
     Output:
         list of files to check"""
-        
+
     try:
         assert (day_metadata.shape[0] % plate_size == 0)
 
@@ -773,7 +774,7 @@ def day_metadata_check(day_metadata, day_root_dir, plate_size=96):
         # if there number of rows of day metadata is not divisible by
         # 96 means there has been an issue with propagating
         files_to_check = []
-        
+
         plate_list = list(day_metadata['imaging_plate_id'].unique())
         day_metadata_grouped = day_metadata.groupby('imaging_plate_id')
         for plate in plate_list:
@@ -791,11 +792,11 @@ def day_metadata_check(day_metadata, day_root_dir, plate_size=96):
             files_to_check = [i for sublist in files_to_check for i in sublist]
             files_to_check = list(np.unique(files_to_check))
             print('These files need to be checked {}'.format(files_to_check))
-            
+
             files_to_check = pd.Series(files_to_check)
             files_to_check.to_csv(day_root_dir / '{}_files_to_check.csv'.format(
                 day_root_dir.stem))
-        
+
             return files_to_check
 
 #%%
@@ -951,11 +952,11 @@ if __name__ == '__main__':
     files_to_check = day_metadata_check(day_metadata,
                                         day_root_dir,
                                         plate_size=48)
-    
+
     # %% Example 5: map library plates to shuffled plate
-    
+
     sourceplate_file = Path('/Users/ibarlow/Desktop/tierpsytools_checks/SyngentaStrainScreen/2020SygentaLibrary3doses_sourceplates_run1.csv')
-    
+
     robot_metadata = merge_robot_metadata(sourceplate_file,
                                           saveto=None,
                                           del_if_exists=True,
@@ -971,21 +972,21 @@ if __name__ == '__main__':
                                            robot_metadata.iterrows()]
     robot_metadata.to_csv(str(sourceplate_file).replace('.csv', '_shuffled.csv'),
                           index=False)
-    # %% Example 6: with Syngenta 12 strain screen   
+    # %% Example 6: with Syngenta 12 strain screen
     day_root_dir = Path('/Users/ibarlow/Desktop/tierpsytools_checks/SyngentaStrainScreen/20200220')
     manual_meta_file = day_root_dir / '20200220_manual_metadata.csv'
     wormsorter_file = day_root_dir / '20200220_wormsorter.csv'
     bad_wells_file = day_root_dir / '20200220_robot_bad_imaging_wells.csv'
     metadata_file = day_root_dir / '20200220_day_metadata.csv'
-    
+
     sourceplates =Path('//Users/ibarlow/Desktop/tierpsytools_checks/SyngentaStrainScreen/sourceplates')
     sourceplates = list(sourceplates.rglob('*shuffled.csv'))
     drug_plates = []
     for file in sourceplates:
         drug_plates.append(pd.read_csv(file))
     drug_plates = pd.concat(drug_plates)
-    
-    #run functions to populate 
+
+    #run functions to populate
     plate_metadata = populate_96WPs(wormsorter_file,
                                     del_if_exists=True)
     bad_wells_df = convert_bad_wells_lut(bad_wells_file)
@@ -993,7 +994,7 @@ if __name__ == '__main__':
                               bad_wells_df,
                               on=['imaging_plate_id', 'well_name'],
                               how='outer')
-    
+
     print('Generating day metadata: {}'.format(
             metadata_file))
     try:
@@ -1020,8 +1021,8 @@ if __name__ == '__main__':
                            how='outer')
     day_metadata.drop(
         day_metadata[day_metadata['imaging_plate_id'].isna()].index,
-                    inplace=True)    
-    # checks to see if all videos 
+                    inplace=True)
+    # checks to see if all videos
     files_to_check = day_metadata_check(day_metadata,
                                         day_root_dir,
                                         plate_size=48) # set to 48 as some half plates
