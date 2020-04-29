@@ -20,7 +20,7 @@ Created on Wed Aug 22 16:00:27 2018
 
 @author: em812
 """
-
+import pdb
 import numpy as np
 from warnings import warn
 
@@ -35,7 +35,7 @@ class drugClass():
             feat, meta,
             MOAinfo=False,
             set_dose_as_index=False,
-            drug_name_col = 'drug_name',
+            drug_name_col = 'drug_type',
             drug_dose_col = 'drug_dose'
             ):
 
@@ -51,23 +51,46 @@ class drugClass():
         # If MOAinfo available, read data on compound class/group and mode of action
         if MOAinfo:
             # Read from metadata
-            assert (meta[
+            if not (meta[
                 ['MOA_general', 'MOA_specific', 'MOA_group']
-                ].nunique()==1).all()
-            self.MOA_general, self.MOA_specific, self.MOA_general = meta[
+                ].nunique()==1).all():
+                pdb.set_trace()
+            self.moa_general, self.moa_specific, self.moa_group = meta[
                 ['MOA_general', 'MOA_specific', 'MOA_group']].values[0]
 
         # keep feat as a dataframe and set row index = drug dose:
         self.feat = feat.copy()
         if set_dose_as_index:
             self.feat.set_index(meta['drug_dose'], inplace=True)
-        self.normalization = None
 
+        self.normalization = None
         self.mil_transform = None
 
         drugClass.nb_of_drugs += 1
 
     ## Define class methods
+    # Get mean dose points
+    def get_mean_doses(self):
+        if not hasattr(self, 'mean_doses'):
+            self.mean_doses = self.feat.groupby(by=self.drug_dose).mean()
+        return self.mean_doses
+
+    def get_dose_dist_from_control(self, control, metric='euclidean'):
+
+        mean_control = np.mean(control, axis=0).reshape(1,-1)
+        mean_dose = self.get_mean_doses()
+
+        if 'eucl' in metric:
+            from sklearn.metrics import euclidean_distances
+            dist = euclidean_distances(mean_control, mean_dose)
+        elif 'mahalan' in metric:
+            from sklearn.covariance import EmpiricalCovariance
+            cov = EmpiricalCovariance().fit(control)
+            dist = cov.mahalanobis(mean_dose)
+
+        return dist
+
+
     # normalization
     def znormalize(self, updateClass=False):
         from sklearn.preprocessing import scale
@@ -130,15 +153,23 @@ class drugClass():
 
     @property
     def moa_info(self):
-        return self.MOA_general, \
-               self.MOA_specific, \
-               self.MOA_group
+        return self.moa_general, \
+               self.moa_specific, \
+               self.moa_group
 
     @moa_info.setter
     def moa_info(self, value):
-        self.MOA_general = value[0]
-        self.MOA_specific = value[1]
-        self.MOA_group = value[2]
+        self.moa_general = value[0]
+        self.moa_specific = value[1]
+        self.moa_group = value[2]
+
+    @property
+    def moa_label(self):
+        return ' - '.join([self.moa_general, self.moa_specific])
+
+    @moa_label.setter
+    def moa_label(self, value):
+        self.moa_label = value
 
     @classmethod
     def add_const_feat(cls,cnstList):

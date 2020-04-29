@@ -5,10 +5,12 @@ Created on Thu Apr 23 10:51:28 2020
 
 @author: em812
 """
+from warnings import warn
+import numpy as np
+import pandas as pd
+from tierpsytools.feature_processing.scaling_class import scalingClass
 
 class effectSizeTransform():
-    import numpy as np
-    import pandas as pd
 
     valid_effect_types = ['max', 'mean', 'median']
 
@@ -20,7 +22,8 @@ class effectSizeTransform():
             normalize_effect = None,
             binary_effect = False,
             scale_per_compound = False,
-            scale_samples = 'minmax_scale', #'scale' #normalize #
+            scale_samples = None, #'minmax_scale', #'scale' #normalize #
+            scale_params = None
             ):
 
         if isinstance(effect_type, str):
@@ -50,39 +53,48 @@ class effectSizeTransform():
             self.scale_samples = scale_samples
         else:
             self.scale_samples = None
+        self.parameters_mask = None
+        self.param_scaler = self.scaler(scale_params)
 
 
-    def scale_individual_compound(self, feat):
+    def scaler(self, scalingtype):
 
-        from inspect import isclass, isfunction
+        if isinstance(scalingtype, str) or scalingtype is None:
+            scalerinstance = scalingClass(function = scalingtype)
+        elif hasattr(scalingtype, 'fit'):
+            scalerinstance = scalingtype
+        else:
+            raise ValueError(
+                'Scaling parameter type not recognised. Valid parameter types '+
+                'include strings \'minmax_scale\', \'standardize\' and \'normalize\' '+
+                'and instances of scaling classes with a fit() method.')
 
-        # Scale compound
+        return scalerinstance
+
+
+    def scale_individual_compound(self, feat, control):
+
+        # Tranform only if the scaler is doing something
         if self.scale_per_compound:
-            if isclass(self.scale_samples):
-                scaler = self.scale_samples()
-                features = scaler.fit_transform(feat)
-            else:
-                if isinstance(self.scale_samples, str):
-                    if self.scale_samples == 'standardize':
-                        from sklearn.preprocessing import scale
-                        scaler = scale
-                    elif self.scale_samples == 'minmax_scale':
-                        from sklearn.preprocessing import minmax_scale
-                        scaler = minmax_scale
-                    elif self.scale_samples == 'normalize':
-                        from sklearn.preprocessing import normalize
-                        scaler = normalize
-                elif isfunction(self.scale_samples):
-                    scaler = self.scale_samples
+            sample_scaler = self.scaler(self.scale_samples)
 
-                features = scaler(feat)
+            features = sample_scaler.fit_transform(
+                pd.concat([control, feat], axis=0, sort=False).values)
+
+            # Separate dmso from drug doses
+            control = pd.DataFrame(
+                features[:control.shape[0], :],
+                columns = control.columns,
+                index = control.index)
 
             feat = pd.DataFrame(
-                features, columns=feat.columns, index=feat.index)
+                features[control.shape[0]:, :],
+                columns = feat.columns,
+                index = feat.index)
 
-        return feat
+        return feat, control
 
-    def transform(self, drugobject, control, update_drugobject=False):
+    def _transform(self, feat, dose, control):
         """
         Get parameters for the effect of an individual compound to all the
         features
@@ -93,7 +105,7 @@ class effectSizeTransform():
                 estimated based on all the data points at all doses.
                 If the effect_type is an array like object with n options then
                 n parameters are extracted.
-            normalize_effect = ['dmso_mean','dmso_std',None] how to normalize
+            normalize_effect = ['control_mean', 'control_std', None] how to normalize
                 the effect of each feature. If None, the effect if not
                 normalized.
             normalize_features = function object for normalization of feature
@@ -101,22 +113,14 @@ class effectSizeTransform():
         return:
             parameters = effect parameters
         """
+
         # make sure the fetures match between control and drug
-        assert control.shape[1] == drugobject.feat.shape[1]
-        assert all([ft in control.columns for ft in drugobject.feat.columns])
-        assert all([ft in drugobject.feat.columns for ft in control.columns])
+        assert control.shape[1] == feat.shape[1]
+        assert all([ft in control.columns for ft in feat.columns])
+        assert all([ft in feat.columns for ft in control.columns])
 
-        if self.scale_per_compound:
-            feat = self.scale_individual_compound(
-                pd.concat([control, drugobject.feat], axis=0, sort=False))
-
-            # Separate dmso from drug doses
-            control = feat.iloc[:control.shape[0], :]
-            feat = feat.iloc[control.shape[0]:, :]
-        else:
-            feat = drugobject.feat[control.columns]
-
-        dose = drugobject.drug_dose
+        # Scale the features
+        feat, control = self.scale_individual_compound(feat, control)
 
         # Get effect size parameters
         n_param = self.n_param
@@ -161,7 +165,113 @@ class effectSizeTransform():
 
         parameters = parameters.reshape(1,-1,order='F').flatten()
 
-        if update_drugobject:
-            drugobject.mil_transform = parameters
-
         return parameters
+
+    def check_input(self, bags, control, doses):
+        from tierpsytools.analysis.drug_screenings.drug_class import drugClass
+
+        if (isinstance(bags[0], np.ndarray) and not isinstance(control, np.ndarray)) \
+            or (isinstance(bags[0], pd.DataFrame) and not isinstance(control, pd.DataFrame)) \
+            or (isinstance(bags[0], drugClass) and not isinstance(control, pd.DataFrame)):
+                raise ValueError('Bags and control are not the same type.')
+
+        assert all([bags[i].feat.shape[1]==bags[i-1].feat.shape[1]
+                    for i in range(len(bags))]), \
+            'The number of features is not constant among bags.'
+
+        assert bags[0].feat.shape[1] == control.shape[1], \
+            'The control has different number of features than the bags.'
+
+        if not isinstance(bags[0], drugClass):
+            if isinstance(bags[0], pd.DataFrame):
+                if isinstance(doses, str) and doses!='index':
+                    bags = [bag.set_index(doses) for bag in bags]
+            elif isinstance(bags[0], np.ndarray):
+                if doses is None or isinstance(doses, str):
+                    raise ValueError(
+                        'The parameter doses need to be defined with the '
+                        'drug dose for each sample of every bag.')
+                else:
+                    bags = [pd.DataFrame(bag, index=dose)
+                            for bag,dose in zip(bags, doses)]
+
+        if isinstance(control, np.ndarray):
+            control = pd.DataFrame(control)
+
+        return bags, control
+
+    def fit(self, bags, control, doses=None, update_druginstances=False):
+        """
+        Parameters:
+            doses : None, str or list-like
+                    If bags is a list of drugClass instances, then this
+                    is ignored.
+                    If bags is a list of pd.DataFrames, then doses should be a
+                    string, either 'index' (if the dose information is in the
+                    index of the dataframe) or the name of the column that
+                    contains the dose information.
+                    If bags is a list of numpy arrays, then doses should be
+                    a list of arrays with the same number of elements as the
+                    number of samples in each bag., containing the dose
+                    information for each sample.
+
+        """
+        from tierpsytools.analysis.drug_screenings.drug_class import drugClass
+
+        bags, control = self.check_input(bags, control, doses)
+
+        parameters = np.zeros((len(bags), control.shape[1]*self.n_param))
+        for ibag, bag in enumerate(bags):
+            if isinstance(bag, drugClass):
+                feat = bag.feat
+                dose = bag.drug_dose
+            else:
+                feat = bag
+                dose = bag.index.to_list()
+
+            parameters[ibag, :] =  self._transform(feat, dose, control)
+
+            if update_druginstances:
+                bag.mil_transform = parameters[ibag, :]
+
+        self.effect_size_parameters = parameters
+
+        return
+
+    def fit_transform(self, bags, control, doses=None, update_druginstances=False):
+
+        self.fit(bags, control, doses=doses, update_druginstances=update_druginstances)
+
+        return self.effect_size_parameters
+
+    def scale_parameters(self, apply_mask=False):
+
+        if apply_mask and self.parameters_mask is not None:
+            parameters = self.effect_size_parameters[:, self.parameters_mask]
+        else:
+            parameters = self.effect_size_parameters
+
+        return self.param_scaler.fit_transform(parameters)
+
+
+    def classify(self,
+            bags, control,
+            bagLabels, estimator,
+            doses=None, update_druginstances=False):
+
+        if not 'effect_size_parameters' in self.__dict__:
+            self.fit(
+                bags, control, doses=doses,
+                update_druginstances=update_druginstances)
+
+        parameters = self.effect_size_parameters
+
+        if self.parameters_mask is None:
+            self.parameters_mask = np.std(self.effect_size_parameters, axis=0)!=0
+
+        parameters = self.scale_parameters(apply_mask=True)
+
+        self.classifier = estimator.fit(parameters, bagLabels)
+
+        return
+
