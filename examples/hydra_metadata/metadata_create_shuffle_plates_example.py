@@ -101,6 +101,8 @@ if __name__ == '__main__':
                                                '_sh%02d' %(r.robot_run_number)
                                                for i, r in
                                                robot_metadata.iterrows()]
+        robot_metadata['is_bad_well'].fillna(False,
+                                             inplace=True)
         
         outfile = Path(str(file).replace('.csv', '_shuffled.csv'))
         if outfile.exists():
