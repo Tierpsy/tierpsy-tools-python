@@ -38,7 +38,6 @@ def create_featsdtypesdict(fname):
             dtypes_dict[feat] = np.float32
     return dtypes_dict
 
-
 def read_tierpsy_feat_summaries(
         feat_file, filenames_file, drop_ventral=True, asfloat32=False):
     """
