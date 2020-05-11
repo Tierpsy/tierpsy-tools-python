@@ -5,42 +5,43 @@ Created on Thu Apr 30 20:26:37 2020
 
 @author: em812
 """
-pos = {'A1': [0,0], 'A2': [0,1], 'A3': [0,2], 'A4': [0,3],
-       'B1': [1,0], 'B2': [1,1], 'B3': [1,2], 'B4': [1,3],
-       'C1': [2,0], 'C2': [2,1], 'C3': [2,2], 'C4': [2,3],
-       'D1': [3,0], 'D2': [3,1], 'D3': [3,2], 'D4': [3,3],
+pos96wellplate = {
+    'A1': [0,0], 'A2': [0,1], 'A3': [0,2], 'A4': [0,3],
+    'B1': [1,0], 'B2': [1,1], 'B3': [1,2], 'B4': [1,3],
+    'C1': [2,0], 'C2': [2,1], 'C3': [2,2], 'C4': [2,3],
+    'D1': [3,0], 'D2': [3,1], 'D3': [3,2], 'D4': [3,3],
 
-       'A5': [0,0], 'A6': [0,1], 'A7': [0,2], 'A8': [0,3],
-       'B5': [1,0], 'B6': [1,1], 'B7': [1,2], 'B8': [1,3],
-       'C5': [2,0], 'C6': [2,1], 'C7': [2,2], 'C8': [2,3],
-       'D5': [3,0], 'D6': [3,1], 'D7': [3,2], 'D8': [3,3],
+    'A5': [0,0], 'A6': [0,1], 'A7': [0,2], 'A8': [0,3],
+    'B5': [1,0], 'B6': [1,1], 'B7': [1,2], 'B8': [1,3],
+    'C5': [2,0], 'C6': [2,1], 'C7': [2,2], 'C8': [2,3],
+    'D5': [3,0], 'D6': [3,1], 'D7': [3,2], 'D8': [3,3],
 
-       'A9': [0,0], 'A10': [0,1], 'A11': [0,2], 'A12': [0,3],
-       'B9': [1,0], 'B10': [1,1], 'B11': [1,2], 'B12': [1,3],
-       'C9': [2,0], 'C10': [2,1], 'C11': [2,2], 'C12': [2,3],
-       'D9': [3,0], 'D10': [3,1], 'D11': [3,2], 'D12': [3,3],
+    'A9': [0,0], 'A10': [0,1], 'A11': [0,2], 'A12': [0,3],
+    'B9': [1,0], 'B10': [1,1], 'B11': [1,2], 'B12': [1,3],
+    'C9': [2,0], 'C10': [2,1], 'C11': [2,2], 'C12': [2,3],
+    'D9': [3,0], 'D10': [3,1], 'D11': [3,2], 'D12': [3,3],
 
-       'E1': [0,0], 'E2': [0,1], 'E3': [0,2], 'E4': [0,3],
-       'F1': [1,0], 'F2': [1,1], 'F3': [1,2], 'F4': [1,3],
-       'G1': [2,0], 'G2': [2,1], 'G3': [2,2], 'G4': [2,3],
-       'H1': [3,0], 'H2': [3,1], 'H3': [3,2], 'H4': [3,3],
+    'E1': [0,0], 'E2': [0,1], 'E3': [0,2], 'E4': [0,3],
+    'F1': [1,0], 'F2': [1,1], 'F3': [1,2], 'F4': [1,3],
+    'G1': [2,0], 'G2': [2,1], 'G3': [2,2], 'G4': [2,3],
+    'H1': [3,0], 'H2': [3,1], 'H3': [3,2], 'H4': [3,3],
 
-       'E5': [0,0], 'E6': [0,1], 'E7': [0,2], 'E8': [0,3],
-       'F5': [1,0], 'F6': [1,1], 'F7': [1,2], 'F8': [1,3],
-       'G5': [2,0], 'G6': [2,1], 'G7': [2,2], 'G8': [2,3],
-       'H5': [3,0], 'H6': [3,1], 'H7': [3,2], 'H8': [3,3],
+    'E5': [0,0], 'E6': [0,1], 'E7': [0,2], 'E8': [0,3],
+    'F5': [1,0], 'F6': [1,1], 'F7': [1,2], 'F8': [1,3],
+    'G5': [2,0], 'G6': [2,1], 'G7': [2,2], 'G8': [2,3],
+    'H5': [3,0], 'H6': [3,1], 'H7': [3,2], 'H8': [3,3],
 
-       'E9': [0,0], 'E10': [0,1], 'E11': [0,2], 'E12': [0,3],
-       'F9': [1,0], 'F10': [1,1], 'F11': [1,2], 'F12': [1,3],
-       'G9': [2,0], 'G10': [2,1], 'G11': [2,2], 'G12': [2,3],
-       'H9': [3,0], 'H10': [3,1], 'H11': [3,2], 'H12': [3,3],
-        }
+    'E9': [0,0], 'E10': [0,1], 'E11': [0,2], 'E12': [0,3],
+    'F9': [1,0], 'F10': [1,1], 'F11': [1,2], 'F12': [1,3],
+    'G9': [2,0], 'G10': [2,1], 'G11': [2,2], 'G12': [2,3],
+    'H9': [3,0], 'H10': [3,1], 'H11': [3,2], 'H12': [3,3],
+     }
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import pdb
 
-def plot_trajectory(
+def _plot_trajectory(
         xycoord, axes=None, subsampling_rate=1, color=None,
         xlim=None, ylim=None):
 
@@ -58,6 +59,33 @@ def plot_trajectory(
 def plot_well_trajectories(
         xycoord, worm_ids, subsampling_rate=1, title=None,
         xlim=None, ylim=None, saveto=None):
+    """
+    Plots the trajectories of one well.
+
+    Parameters
+    ----------
+    xycoord : dataframe shape = ( sum(trajectories_lengths) , 2)
+        A dataframe with 'coord_x' and 'coord_y' columns containing all the
+        trajectories timeseries of the well.
+    worm_ids : array-like shape = (sum(trajectories_lengths), )
+        Contains the well id for each row of xycoord.
+    subsampling_rate : int, optional
+        Subsampling rate for plotting purposes. The default is 1.
+    title : string, optional
+        The title of the plot. The default is None.
+    xlim : list len=2, optional
+        The limits of the plot along the x axis. The default is None.
+    ylim : list len=2, optional
+        The limits of the plot along the y axis. The default is None.
+    saveto : path, optional
+        The full path to the file where the figure will be saved. If None, the
+        figure will not be saved and will be kept open. The default is None.
+
+    Returns
+    -------
+    None.
+
+    """
     from numpy import unique
     import textwrap
 
@@ -65,15 +93,13 @@ def plot_well_trajectories(
     if title is None:
         title = '{} trajectories'.format(n_traj)
     else:
-        title = '\n'.join(
-            ['{} trajectories'.format(n_traj),
-             textwrap.fill(title, 50)])
+        title = textwrap.fill(title, 50)
     xycoord = pd.DataFrame(xycoord)
 
     fig, ax = plt.subplots()
     ax.set_title(title)
     xycoord.groupby(by=worm_ids).apply(
-        plot_trajectory, axes=ax, subsampling_rate=subsampling_rate
+        _plot_trajectory, axes=ax, subsampling_rate=subsampling_rate
         )
     if xlim is None and ylim is None:
         ax.axis('equal')
@@ -89,9 +115,52 @@ def plot_well_trajectories(
 def plot_multiwell_trajectories(
         xycoord, well_ids, worm_ids, subsampling_rate=1, title=None,
         wells_to_plot=None, bad_wells=None, well_size=None, saveto=None,
-        well_drug=None, well_dose=None):
+        well_title=None, n_wells=96):
+    """
+    Plot all the worm trajectories of a multiwell plate.
+
+    Parameters
+    ----------
+    xycoord : dataframe shape = ( sum(trajectories_lengths) , 2)
+        A dataframe with 'coord_x' and 'coord_y' columns containing all the
+        trajectories timeseries of all the wells of the multi-well plate.
+    well_ids : array-like shape = (sum(trajectories_lengths), )
+        Contains the well id for each row of xycoord.
+    worm_ids : array-like shape = (sum(trajectories_lengths), )
+        Contains the worm if for each row of xycoord.
+    subsampling_rate : int, optional
+        Subsampling rate for plotting purposes. The default is 1.
+    title : string, optional
+        The title of the plot. The default is None.
+    wells_to_plot : list of well ids, optional
+        It specifies the wells to plot. The default is None.
+    bad_wells : list of well ids, optional
+        It specified wells that will be marked as bad in the plot.
+        The default is None.
+    well_size : float, optional
+        The diameter of each well (in the same units as the x,y coordinates).
+        The default is None.
+    saveto : path, optional
+        The full path to the file where the figure will be saved. If None, the
+        figure will not be saved and will be kept open. The default is None.
+    well_title : dictionary, optional
+        A dictionary mathcing well ids to well titles. It defins the title of
+        each individual well (subplot) in the figure. If None, the title of
+        each subplot is the number of trajectories plotted.
+        The default is None.
+
+    Returns
+    -------
+    None.
+
+    """
     import numpy as np
     import textwrap
+
+    if n_wells==96:
+        pos = pos96wellplate
+    else:
+        raise ValueError('Only 96 well plates supported.')
 
     xycoord = pd.DataFrame(xycoord)
 
@@ -127,25 +196,24 @@ def plot_multiwell_trajectories(
             ylim = [ylim[0]-margin, ylim[1]+margin]
 
         if well in wells_to_plot:
-            title = 'well {} : {} trajectories'.format(well, n_traj)
-            if well_drug is not None:
-                title = title + '\n'+textwrap.fill(well_drug[well], 25)
-            if well_dose is not None:
-                title = title + '\n'+textwrap.fill(well_dose[well], 25)
-            ax[i[0],i[1]].set_title(title, fontsize=8)
-            wdf.groupby(by=wwormids).apply(
-                plot_trajectory, axes=ax[i[0],i[1]], subsampling_rate=subsampling_rate
-                )
-        elif well in bad_wells:
-            title = 'BAD well {} : {} trajectories'.format(well, n_traj)
-            if well_drug is not None:
-                title = title + '\n'+textwrap.fill(well_drug[well], 25)
-            if well_dose is not None:
-                title = title + '\n'+textwrap.fill(well_dose[well], 25)
+            if well_title is None:
+                title = 'well {} : {} trajectories'.format(well, n_traj)
+            else:
+                title = textwrap.fill(well_title[well], 25)
 
             ax[i[0],i[1]].set_title(title, fontsize=8)
             wdf.groupby(by=wwormids).apply(
-                plot_trajectory, axes=ax[i[0],i[1]],
+                _plot_trajectory, axes=ax[i[0],i[1]], subsampling_rate=subsampling_rate
+                )
+        elif well in bad_wells:
+            if well_title is None:
+                title = 'BAD well {} : {} trajectories'.format(well, n_traj)
+            else:
+                title = textwrap.fill(well_title[well], 25)
+
+            ax[i[0],i[1]].set_title(title, fontsize=8)
+            wdf.groupby(by=wwormids).apply(
+                _plot_trajectory, axes=ax[i[0],i[1]],
                 subsampling_rate=subsampling_rate, color='grey'
                 )
             ax[i[0],i[1]].plot(xlim, ylim, ':', c='black')
