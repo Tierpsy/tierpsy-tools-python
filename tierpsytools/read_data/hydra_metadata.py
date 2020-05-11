@@ -14,6 +14,9 @@ def add_bluelight_label(
         ):
     from pathlib import Path
 
+    if 'bluelight' in meta:
+        return meta
+
     bluelight = meta[filename_column].apply(
         lambda x: Path(x).stem.split(split_string)[location])
     meta.insert(0, 'bluelight', bluelight)
@@ -96,6 +99,10 @@ def read_hydra_metadata(
     newmeta.insert(
         0, 'imgstore_name', newmeta['file_id'].map(
             dict(fname[['file_id', 'imgstore_name']].values))
+        )
+    newmeta.insert(
+        0, 'featuresN_filename', newmeta['file_id'].map(
+            dict(fname[['file_id', filename]].values))
         )
 
     newmeta = pd.merge(
