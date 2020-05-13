@@ -34,16 +34,20 @@ def ask_user_go_ahead(fnames):
                 print(fname)
 
 
-def copy_table(table_name, src_fname, dst_fname):
+def copy_table(table_names, src_fname, dst_fname):
     """copy_table
-    Copy a single hdf5 table (table_name is the path within the hdf5 file)
+    Copy a single (or a list of) hdf5 table
+    (table_names are the paths within the hdf5 file)
     from src_fname to dst_fname
     """
+    if not isinstance(table_names, list):
+        table_names = [table_names]
     if not dst_fname.parent.exists():
         dst_fname.parent.mkdir(parents=True, exist_ok=True)
     with h5py.File(src_fname, 'r') as fids:
-        with h5py.File(dst_fname, 'w') as fidd:
-            fids.copy(table_name, fidd['/'])
+        with h5py.File(dst_fname, 'r+') as fidd:
+            for table_name in table_names:
+                fids.copy(table_name, fidd['/'])
 
 
 def extract_table(table_name, src, dst, search_string):
@@ -74,10 +78,15 @@ if __name__ == '__main__':
     # table_name = '/trajectories_data'
     # search_string = '*_featuresN.hdf5'
 
-    src = Path('/Users/lferiani/Hackathon/multiwell_tierpsy/12_FEAT_TIERPSY_forGUI/MaskedVideos')
-    dst = Path('/Users/lferiani/Hackathon/multiwell_tierpsy/12_FEAT_TIERPSY_forGUI/wells_annotations')
-    table_name = '/fov_wells'
-    search_string = '*.hdf5'
+    # src = Path('/Users/lferiani/Hackathon/multiwell_tierpsy/12_FEAT_TIERPSY_forGUI/MaskedVideos')
+    # dst = Path('/Users/lferiani/Hackathon/multiwell_tierpsy/12_FEAT_TIERPSY_forGUI/wells_annotations')
+    # table_name = '/fov_wells'
+    # search_string = '*.hdf5'
     # search_string = '*prestim*/*.hdf5'
+
+    src = Path('/Volumes/Seagate Bac/SyngentaScreen/Results')
+    dst = Path('/Volumes/Seagate Bac/SyngentaScreen/Results_for_Ziwei')
+    table_name = ['/timeseries_data', '/blob_features', '/trajectories_data']
+    search_string = '*_featuresN.hdf5'
 
     extract_table(table_name, src, dst, search_string)
