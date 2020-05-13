@@ -1,7 +1,7 @@
 import pandas as pd
 
 HYDRA2CAM_DF = pd.DataFrame({
-	'Hydra01':["22956818", "22956816", "22956813", "22956805", "22956807","22956832"],
+    'Hydra01':["22956818", "22956816", "22956813", "22956805", "22956807","22956832"],
     'Hydra02':["22956839", "22956837", "22956836", "22956829","22956822","22956806"],
     'Hydra03':["22956814", "22956827", "22956819", "22956833", "22956823","22956840"],
     'Hydra04':["22956812", "22956834","22956817","22956811","22956831", "22956809"],
@@ -9,7 +9,7 @@ HYDRA2CAM_DF = pd.DataFrame({
     })
 
 CAM2CH_list = [
-	('22956818', 'Ch1', 'Hydra01'), # Hydra01
+    ('22956818', 'Ch1', 'Hydra01'), # Hydra01
     ('22956816', 'Ch2', 'Hydra01'),
     ('22956813', 'Ch3', 'Hydra01'),
     ('22956805', 'Ch4', 'Hydra01'),
@@ -41,7 +41,7 @@ CAM2CH_list = [
     ('22594548', 'Ch6', 'Hydra05')
     ]
 
-CAM2CH_df = pd.DataFrame(CAM2CH_list, 
+CAM2CH_df = pd.DataFrame(CAM2CH_list,
                          columns=['camera_serial', 'channel', 'rig'])
 
 
@@ -49,7 +49,7 @@ CAM2CH_df = pd.DataFrame(CAM2CH_list,
 # there will be many as it depends on total number of wells, upright/upsidedown,
 # and in case of the 48wp how many wells in the fov
 UPRIGHT_96WP = pd.DataFrame.from_dict({
-	('Ch1',0):[ 'A1', 'B1', 'C1', 'D1'],
+    ('Ch1',0):[ 'A1', 'B1', 'C1', 'D1'],
     ('Ch1',1):[ 'A2', 'B2', 'C2', 'D2'],
     ('Ch1',2):[ 'A3', 'B3', 'C3', 'D3'],
     ('Ch1',3):[ 'A4', 'B4', 'C4', 'D4'],

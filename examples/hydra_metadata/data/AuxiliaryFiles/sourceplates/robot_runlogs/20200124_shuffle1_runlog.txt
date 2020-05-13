@@ -1,0 +1,692 @@
+Loading json containers...
+Json container file load complete, listing database
+Found 0 containers to add. Starting migration...
+Database migration complete!
+slot 10 col 0 --> slot 11 col 6
+slot 10 col 1 --> slot 11 col 10
+slot 10 col 2 --> slot 11 col 4
+slot 10 col 3 --> slot 11 col 1
+slot 10 col 4 --> slot 11 col 9
+slot 10 col 5 --> slot 11 col 0
+slot 10 col 6 --> slot 11 col 7
+slot 10 col 7 --> slot 11 col 11
+slot 10 col 8 --> slot 11 col 2
+slot 10 col 9 --> slot 11 col 8
+slot 10 col 10 --> slot 11 col 3
+slot 10 col 11 --> slot 11 col 5
+slot 7 col 0 --> slot 8 col 6
+slot 7 col 1 --> slot 8 col 3
+slot 7 col 2 --> slot 8 col 1
+slot 7 col 3 --> slot 8 col 0
+slot 7 col 4 --> slot 8 col 8
+slot 7 col 5 --> slot 8 col 4
+slot 7 col 6 --> slot 8 col 9
+slot 7 col 7 --> slot 8 col 7
+slot 7 col 8 --> slot 8 col 5
+slot 7 col 9 --> slot 8 col 11
+slot 7 col 10 --> slot 8 col 2
+slot 7 col 11 --> slot 8 col 10
+slot 4 col 0 --> slot 5 col 1
+slot 4 col 1 --> slot 5 col 5
+slot 4 col 2 --> slot 5 col 8
+slot 4 col 3 --> slot 5 col 7
+slot 4 col 4 --> slot 5 col 6
+slot 4 col 5 --> slot 5 col 2
+slot 4 col 6 --> slot 5 col 11
+slot 4 col 7 --> slot 5 col 4
+slot 4 col 8 --> slot 5 col 0
+slot 4 col 9 --> slot 5 col 9
+slot 4 col 10 --> slot 5 col 3
+slot 4 col 11 --> slot 5 col 10
+slot 1 col 0 --> slot 2 col 0
+slot 1 col 1 --> slot 2 col 9
+slot 1 col 2 --> slot 2 col 1
+slot 1 col 3 --> slot 2 col 2
+slot 1 col 4 --> slot 2 col 7
+slot 1 col 5 --> slot 2 col 8
+slot 1 col 6 --> slot 2 col 6
+slot 1 col 7 --> slot 2 col 5
+slot 1 col 8 --> slot 2 col 10
+slot 1 col 9 --> slot 2 col 3
+slot 1 col 10 --> slot 2 col 4
+slot 1 col 11 --> slot 2 col 11
+Tips used so far: 0
+<Slot 10> <Well A1> -> <Slot 11> <Well A7>
+<Slot 10> <Well A2> -> <Slot 11> <Well A11>
+<Slot 10> <Well A3> -> <Slot 11> <Well A5>
+<Slot 10> <Well A4> -> <Slot 11> <Well A2>
+<Slot 10> <Well A5> -> <Slot 11> <Well A10>
+<Slot 10> <Well A6> -> <Slot 11> <Well A1>
+<Slot 10> <Well A7> -> <Slot 11> <Well A8>
+<Slot 10> <Well A8> -> <Slot 11> <Well A12>
+<Slot 10> <Well A9> -> <Slot 11> <Well A3>
+<Slot 10> <Well A10> -> <Slot 11> <Well A9>
+<Slot 10> <Well A11> -> <Slot 11> <Well A4>
+<Slot 10> <Well A12> -> <Slot 11> <Well A6>
+Tips used so far: 96
+<Slot 7> <Well A1> -> <Slot 8> <Well A7>
+<Slot 7> <Well A2> -> <Slot 8> <Well A4>
+<Slot 7> <Well A3> -> <Slot 8> <Well A2>
+<Slot 7> <Well A4> -> <Slot 8> <Well A1>
+<Slot 7> <Well A5> -> <Slot 8> <Well A9>
+<Slot 7> <Well A6> -> <Slot 8> <Well A5>
+<Slot 7> <Well A7> -> <Slot 8> <Well A10>
+<Slot 7> <Well A8> -> <Slot 8> <Well A8>
+<Slot 7> <Well A9> -> <Slot 8> <Well A6>
+<Slot 7> <Well A10> -> <Slot 8> <Well A12>
+<Slot 7> <Well A11> -> <Slot 8> <Well A3>
+<Slot 7> <Well A12> -> <Slot 8> <Well A11>
+Tips used so far: 192
+<Slot 4> <Well A1> -> <Slot 5> <Well A2>
+<Slot 4> <Well A2> -> <Slot 5> <Well A6>
+<Slot 4> <Well A3> -> <Slot 5> <Well A9>
+<Slot 4> <Well A4> -> <Slot 5> <Well A8>
+<Slot 4> <Well A5> -> <Slot 5> <Well A7>
+<Slot 4> <Well A6> -> <Slot 5> <Well A3>
+<Slot 4> <Well A7> -> <Slot 5> <Well A12>
+<Slot 4> <Well A8> -> <Slot 5> <Well A5>
+<Slot 4> <Well A9> -> <Slot 5> <Well A1>
+<Slot 4> <Well A10> -> <Slot 5> <Well A10>
+<Slot 4> <Well A11> -> <Slot 5> <Well A4>
+<Slot 4> <Well A12> -> <Slot 5> <Well A11>
+Tips used so far: 288
+<Slot 1> <Well A1> -> <Slot 2> <Well A1>
+<Slot 1> <Well A2> -> <Slot 2> <Well A10>
+<Slot 1> <Well A3> -> <Slot 2> <Well A2>
+<Slot 1> <Well A4> -> <Slot 2> <Well A3>
+<Slot 1> <Well A5> -> <Slot 2> <Well A8>
+<Slot 1> <Well A6> -> <Slot 2> <Well A9>
+<Slot 1> <Well A7> -> <Slot 2> <Well A7>
+<Slot 1> <Well A8> -> <Slot 2> <Well A6>
+<Slot 1> <Well A9> -> <Slot 2> <Well A11>
+<Slot 1> <Well A10> -> <Slot 2> <Well A4>
+<Slot 1> <Well A11> -> <Slot 2> <Well A5>
+<Slot 1> <Well A12> -> <Slot 2> <Well A12>
+Tips used so far: 384
+Dropping tip well A1 in "12"
+Logs from this command:
+WARNING (pipette): Cannot drop tip without a tip attached.
+Transferring 15.0 from wells A1...A12 in "10" to wells A7...A6 in "11"
+	Picking up tip wells A1...H1 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A1 in "10" at 1.0 speed
+		Dispensing 15 uL into well A1 in "10"
+		Aspirating 15 uL from well A1 in "10" at 1.0 speed
+		Dispensing 15 uL into well A1 in "10"
+		Aspirating 15 uL from well A1 in "10" at 1.0 speed
+		Dispensing 15 uL into well A1 in "10"
+	Aspirating 15.0 uL from well A1 in "10" at 1 speed
+	Dispensing 15.0 uL into well A7 in "11"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A2...H2 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A2 in "10" at 1.0 speed
+		Dispensing 15 uL into well A2 in "10"
+		Aspirating 15 uL from well A2 in "10" at 1.0 speed
+		Dispensing 15 uL into well A2 in "10"
+		Aspirating 15 uL from well A2 in "10" at 1.0 speed
+		Dispensing 15 uL into well A2 in "10"
+	Aspirating 15.0 uL from well A2 in "10" at 1 speed
+	Dispensing 15.0 uL into well A11 in "11"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A3...H3 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A3 in "10" at 1.0 speed
+		Dispensing 15 uL into well A3 in "10"
+		Aspirating 15 uL from well A3 in "10" at 1.0 speed
+		Dispensing 15 uL into well A3 in "10"
+		Aspirating 15 uL from well A3 in "10" at 1.0 speed
+		Dispensing 15 uL into well A3 in "10"
+	Aspirating 15.0 uL from well A3 in "10" at 1 speed
+	Dispensing 15.0 uL into well A5 in "11"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A4...H4 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A4 in "10" at 1.0 speed
+		Dispensing 15 uL into well A4 in "10"
+		Aspirating 15 uL from well A4 in "10" at 1.0 speed
+		Dispensing 15 uL into well A4 in "10"
+		Aspirating 15 uL from well A4 in "10" at 1.0 speed
+		Dispensing 15 uL into well A4 in "10"
+	Aspirating 15.0 uL from well A4 in "10" at 1 speed
+	Dispensing 15.0 uL into well A2 in "11"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A5...H5 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A5 in "10" at 1.0 speed
+		Dispensing 15 uL into well A5 in "10"
+		Aspirating 15 uL from well A5 in "10" at 1.0 speed
+		Dispensing 15 uL into well A5 in "10"
+		Aspirating 15 uL from well A5 in "10" at 1.0 speed
+		Dispensing 15 uL into well A5 in "10"
+	Aspirating 15.0 uL from well A5 in "10" at 1 speed
+	Dispensing 15.0 uL into well A10 in "11"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A6...H6 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A6 in "10" at 1.0 speed
+		Dispensing 15 uL into well A6 in "10"
+		Aspirating 15 uL from well A6 in "10" at 1.0 speed
+		Dispensing 15 uL into well A6 in "10"
+		Aspirating 15 uL from well A6 in "10" at 1.0 speed
+		Dispensing 15 uL into well A6 in "10"
+	Aspirating 15.0 uL from well A6 in "10" at 1 speed
+	Dispensing 15.0 uL into well A1 in "11"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A7...H7 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A7 in "10" at 1.0 speed
+		Dispensing 15 uL into well A7 in "10"
+		Aspirating 15 uL from well A7 in "10" at 1.0 speed
+		Dispensing 15 uL into well A7 in "10"
+		Aspirating 15 uL from well A7 in "10" at 1.0 speed
+		Dispensing 15 uL into well A7 in "10"
+	Aspirating 15.0 uL from well A7 in "10" at 1 speed
+	Dispensing 15.0 uL into well A8 in "11"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A8...H8 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A8 in "10" at 1.0 speed
+		Dispensing 15 uL into well A8 in "10"
+		Aspirating 15 uL from well A8 in "10" at 1.0 speed
+		Dispensing 15 uL into well A8 in "10"
+		Aspirating 15 uL from well A8 in "10" at 1.0 speed
+		Dispensing 15 uL into well A8 in "10"
+	Aspirating 15.0 uL from well A8 in "10" at 1 speed
+	Dispensing 15.0 uL into well A12 in "11"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A9...H9 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A9 in "10" at 1.0 speed
+		Dispensing 15 uL into well A9 in "10"
+		Aspirating 15 uL from well A9 in "10" at 1.0 speed
+		Dispensing 15 uL into well A9 in "10"
+		Aspirating 15 uL from well A9 in "10" at 1.0 speed
+		Dispensing 15 uL into well A9 in "10"
+	Aspirating 15.0 uL from well A9 in "10" at 1 speed
+	Dispensing 15.0 uL into well A3 in "11"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A10...H10 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A10 in "10" at 1.0 speed
+		Dispensing 15 uL into well A10 in "10"
+		Aspirating 15 uL from well A10 in "10" at 1.0 speed
+		Dispensing 15 uL into well A10 in "10"
+		Aspirating 15 uL from well A10 in "10" at 1.0 speed
+		Dispensing 15 uL into well A10 in "10"
+	Aspirating 15.0 uL from well A10 in "10" at 1 speed
+	Dispensing 15.0 uL into well A9 in "11"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A11...H11 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A11 in "10" at 1.0 speed
+		Dispensing 15 uL into well A11 in "10"
+		Aspirating 15 uL from well A11 in "10" at 1.0 speed
+		Dispensing 15 uL into well A11 in "10"
+		Aspirating 15 uL from well A11 in "10" at 1.0 speed
+		Dispensing 15 uL into well A11 in "10"
+	Aspirating 15.0 uL from well A11 in "10" at 1 speed
+	Dispensing 15.0 uL into well A4 in "11"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A12...H12 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A12 in "10" at 1.0 speed
+		Dispensing 15 uL into well A12 in "10"
+		Aspirating 15 uL from well A12 in "10" at 1.0 speed
+		Dispensing 15 uL into well A12 in "10"
+		Aspirating 15 uL from well A12 in "10" at 1.0 speed
+		Dispensing 15 uL into well A12 in "10"
+	Aspirating 15.0 uL from well A12 in "10" at 1 speed
+	Dispensing 15.0 uL into well A6 in "11"
+	Blowing out
+	Dropping tip well A1 in "12"
+Pausing robot operation
+Transferring 15.0 from wells A1...A12 in "7" to wells A7...A11 in "8"
+	Picking up tip wells A1...H1 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A1 in "7" at 1.0 speed
+		Dispensing 15 uL into well A1 in "7"
+		Aspirating 15 uL from well A1 in "7" at 1.0 speed
+		Dispensing 15 uL into well A1 in "7"
+		Aspirating 15 uL from well A1 in "7" at 1.0 speed
+		Dispensing 15 uL into well A1 in "7"
+	Aspirating 15.0 uL from well A1 in "7" at 1 speed
+	Dispensing 15.0 uL into well A7 in "8"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A2...H2 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A2 in "7" at 1.0 speed
+		Dispensing 15 uL into well A2 in "7"
+		Aspirating 15 uL from well A2 in "7" at 1.0 speed
+		Dispensing 15 uL into well A2 in "7"
+		Aspirating 15 uL from well A2 in "7" at 1.0 speed
+		Dispensing 15 uL into well A2 in "7"
+	Aspirating 15.0 uL from well A2 in "7" at 1 speed
+	Dispensing 15.0 uL into well A4 in "8"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A3...H3 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A3 in "7" at 1.0 speed
+		Dispensing 15 uL into well A3 in "7"
+		Aspirating 15 uL from well A3 in "7" at 1.0 speed
+		Dispensing 15 uL into well A3 in "7"
+		Aspirating 15 uL from well A3 in "7" at 1.0 speed
+		Dispensing 15 uL into well A3 in "7"
+	Aspirating 15.0 uL from well A3 in "7" at 1 speed
+	Dispensing 15.0 uL into well A2 in "8"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A4...H4 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A4 in "7" at 1.0 speed
+		Dispensing 15 uL into well A4 in "7"
+		Aspirating 15 uL from well A4 in "7" at 1.0 speed
+		Dispensing 15 uL into well A4 in "7"
+		Aspirating 15 uL from well A4 in "7" at 1.0 speed
+		Dispensing 15 uL into well A4 in "7"
+	Aspirating 15.0 uL from well A4 in "7" at 1 speed
+	Dispensing 15.0 uL into well A1 in "8"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A5...H5 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A5 in "7" at 1.0 speed
+		Dispensing 15 uL into well A5 in "7"
+		Aspirating 15 uL from well A5 in "7" at 1.0 speed
+		Dispensing 15 uL into well A5 in "7"
+		Aspirating 15 uL from well A5 in "7" at 1.0 speed
+		Dispensing 15 uL into well A5 in "7"
+	Aspirating 15.0 uL from well A5 in "7" at 1 speed
+	Dispensing 15.0 uL into well A9 in "8"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A6...H6 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A6 in "7" at 1.0 speed
+		Dispensing 15 uL into well A6 in "7"
+		Aspirating 15 uL from well A6 in "7" at 1.0 speed
+		Dispensing 15 uL into well A6 in "7"
+		Aspirating 15 uL from well A6 in "7" at 1.0 speed
+		Dispensing 15 uL into well A6 in "7"
+	Aspirating 15.0 uL from well A6 in "7" at 1 speed
+	Dispensing 15.0 uL into well A5 in "8"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A7...H7 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A7 in "7" at 1.0 speed
+		Dispensing 15 uL into well A7 in "7"
+		Aspirating 15 uL from well A7 in "7" at 1.0 speed
+		Dispensing 15 uL into well A7 in "7"
+		Aspirating 15 uL from well A7 in "7" at 1.0 speed
+		Dispensing 15 uL into well A7 in "7"
+	Aspirating 15.0 uL from well A7 in "7" at 1 speed
+	Dispensing 15.0 uL into well A10 in "8"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A8...H8 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A8 in "7" at 1.0 speed
+		Dispensing 15 uL into well A8 in "7"
+		Aspirating 15 uL from well A8 in "7" at 1.0 speed
+		Dispensing 15 uL into well A8 in "7"
+		Aspirating 15 uL from well A8 in "7" at 1.0 speed
+		Dispensing 15 uL into well A8 in "7"
+	Aspirating 15.0 uL from well A8 in "7" at 1 speed
+	Dispensing 15.0 uL into well A8 in "8"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A9...H9 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A9 in "7" at 1.0 speed
+		Dispensing 15 uL into well A9 in "7"
+		Aspirating 15 uL from well A9 in "7" at 1.0 speed
+		Dispensing 15 uL into well A9 in "7"
+		Aspirating 15 uL from well A9 in "7" at 1.0 speed
+		Dispensing 15 uL into well A9 in "7"
+	Aspirating 15.0 uL from well A9 in "7" at 1 speed
+	Dispensing 15.0 uL into well A6 in "8"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A10...H10 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A10 in "7" at 1.0 speed
+		Dispensing 15 uL into well A10 in "7"
+		Aspirating 15 uL from well A10 in "7" at 1.0 speed
+		Dispensing 15 uL into well A10 in "7"
+		Aspirating 15 uL from well A10 in "7" at 1.0 speed
+		Dispensing 15 uL into well A10 in "7"
+	Aspirating 15.0 uL from well A10 in "7" at 1 speed
+	Dispensing 15.0 uL into well A12 in "8"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A11...H11 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A11 in "7" at 1.0 speed
+		Dispensing 15 uL into well A11 in "7"
+		Aspirating 15 uL from well A11 in "7" at 1.0 speed
+		Dispensing 15 uL into well A11 in "7"
+		Aspirating 15 uL from well A11 in "7" at 1.0 speed
+		Dispensing 15 uL into well A11 in "7"
+	Aspirating 15.0 uL from well A11 in "7" at 1 speed
+	Dispensing 15.0 uL into well A3 in "8"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A12...H12 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A12 in "7" at 1.0 speed
+		Dispensing 15 uL into well A12 in "7"
+		Aspirating 15 uL from well A12 in "7" at 1.0 speed
+		Dispensing 15 uL into well A12 in "7"
+		Aspirating 15 uL from well A12 in "7" at 1.0 speed
+		Dispensing 15 uL into well A12 in "7"
+	Aspirating 15.0 uL from well A12 in "7" at 1 speed
+	Dispensing 15.0 uL into well A11 in "8"
+	Blowing out
+	Dropping tip well A1 in "12"
+Pausing robot operation
+Transferring 15.0 from wells A1...A12 in "4" to wells A2...A11 in "5"
+	Picking up tip wells A1...H1 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A1 in "4" at 1.0 speed
+		Dispensing 15 uL into well A1 in "4"
+		Aspirating 15 uL from well A1 in "4" at 1.0 speed
+		Dispensing 15 uL into well A1 in "4"
+		Aspirating 15 uL from well A1 in "4" at 1.0 speed
+		Dispensing 15 uL into well A1 in "4"
+	Aspirating 15.0 uL from well A1 in "4" at 1 speed
+	Dispensing 15.0 uL into well A2 in "5"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A2...H2 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A2 in "4" at 1.0 speed
+		Dispensing 15 uL into well A2 in "4"
+		Aspirating 15 uL from well A2 in "4" at 1.0 speed
+		Dispensing 15 uL into well A2 in "4"
+		Aspirating 15 uL from well A2 in "4" at 1.0 speed
+		Dispensing 15 uL into well A2 in "4"
+	Aspirating 15.0 uL from well A2 in "4" at 1 speed
+	Dispensing 15.0 uL into well A6 in "5"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A3...H3 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A3 in "4" at 1.0 speed
+		Dispensing 15 uL into well A3 in "4"
+		Aspirating 15 uL from well A3 in "4" at 1.0 speed
+		Dispensing 15 uL into well A3 in "4"
+		Aspirating 15 uL from well A3 in "4" at 1.0 speed
+		Dispensing 15 uL into well A3 in "4"
+	Aspirating 15.0 uL from well A3 in "4" at 1 speed
+	Dispensing 15.0 uL into well A9 in "5"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A4...H4 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A4 in "4" at 1.0 speed
+		Dispensing 15 uL into well A4 in "4"
+		Aspirating 15 uL from well A4 in "4" at 1.0 speed
+		Dispensing 15 uL into well A4 in "4"
+		Aspirating 15 uL from well A4 in "4" at 1.0 speed
+		Dispensing 15 uL into well A4 in "4"
+	Aspirating 15.0 uL from well A4 in "4" at 1 speed
+	Dispensing 15.0 uL into well A8 in "5"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A5...H5 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A5 in "4" at 1.0 speed
+		Dispensing 15 uL into well A5 in "4"
+		Aspirating 15 uL from well A5 in "4" at 1.0 speed
+		Dispensing 15 uL into well A5 in "4"
+		Aspirating 15 uL from well A5 in "4" at 1.0 speed
+		Dispensing 15 uL into well A5 in "4"
+	Aspirating 15.0 uL from well A5 in "4" at 1 speed
+	Dispensing 15.0 uL into well A7 in "5"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A6...H6 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A6 in "4" at 1.0 speed
+		Dispensing 15 uL into well A6 in "4"
+		Aspirating 15 uL from well A6 in "4" at 1.0 speed
+		Dispensing 15 uL into well A6 in "4"
+		Aspirating 15 uL from well A6 in "4" at 1.0 speed
+		Dispensing 15 uL into well A6 in "4"
+	Aspirating 15.0 uL from well A6 in "4" at 1 speed
+	Dispensing 15.0 uL into well A3 in "5"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A7...H7 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A7 in "4" at 1.0 speed
+		Dispensing 15 uL into well A7 in "4"
+		Aspirating 15 uL from well A7 in "4" at 1.0 speed
+		Dispensing 15 uL into well A7 in "4"
+		Aspirating 15 uL from well A7 in "4" at 1.0 speed
+		Dispensing 15 uL into well A7 in "4"
+	Aspirating 15.0 uL from well A7 in "4" at 1 speed
+	Dispensing 15.0 uL into well A12 in "5"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A8...H8 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A8 in "4" at 1.0 speed
+		Dispensing 15 uL into well A8 in "4"
+		Aspirating 15 uL from well A8 in "4" at 1.0 speed
+		Dispensing 15 uL into well A8 in "4"
+		Aspirating 15 uL from well A8 in "4" at 1.0 speed
+		Dispensing 15 uL into well A8 in "4"
+	Aspirating 15.0 uL from well A8 in "4" at 1 speed
+	Dispensing 15.0 uL into well A5 in "5"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A9...H9 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A9 in "4" at 1.0 speed
+		Dispensing 15 uL into well A9 in "4"
+		Aspirating 15 uL from well A9 in "4" at 1.0 speed
+		Dispensing 15 uL into well A9 in "4"
+		Aspirating 15 uL from well A9 in "4" at 1.0 speed
+		Dispensing 15 uL into well A9 in "4"
+	Aspirating 15.0 uL from well A9 in "4" at 1 speed
+	Dispensing 15.0 uL into well A1 in "5"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A10...H10 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A10 in "4" at 1.0 speed
+		Dispensing 15 uL into well A10 in "4"
+		Aspirating 15 uL from well A10 in "4" at 1.0 speed
+		Dispensing 15 uL into well A10 in "4"
+		Aspirating 15 uL from well A10 in "4" at 1.0 speed
+		Dispensing 15 uL into well A10 in "4"
+	Aspirating 15.0 uL from well A10 in "4" at 1 speed
+	Dispensing 15.0 uL into well A10 in "5"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A11...H11 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A11 in "4" at 1.0 speed
+		Dispensing 15 uL into well A11 in "4"
+		Aspirating 15 uL from well A11 in "4" at 1.0 speed
+		Dispensing 15 uL into well A11 in "4"
+		Aspirating 15 uL from well A11 in "4" at 1.0 speed
+		Dispensing 15 uL into well A11 in "4"
+	Aspirating 15.0 uL from well A11 in "4" at 1 speed
+	Dispensing 15.0 uL into well A4 in "5"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A12...H12 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A12 in "4" at 1.0 speed
+		Dispensing 15 uL into well A12 in "4"
+		Aspirating 15 uL from well A12 in "4" at 1.0 speed
+		Dispensing 15 uL into well A12 in "4"
+		Aspirating 15 uL from well A12 in "4" at 1.0 speed
+		Dispensing 15 uL into well A12 in "4"
+	Aspirating 15.0 uL from well A12 in "4" at 1 speed
+	Dispensing 15.0 uL into well A11 in "5"
+	Blowing out
+	Dropping tip well A1 in "12"
+Pausing robot operation
+Transferring 15.0 from wells A1...A12 in "1" to wells A1...A12 in "2"
+	Picking up tip wells A1...H1 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A1 in "1" at 1.0 speed
+		Dispensing 15 uL into well A1 in "1"
+		Aspirating 15 uL from well A1 in "1" at 1.0 speed
+		Dispensing 15 uL into well A1 in "1"
+		Aspirating 15 uL from well A1 in "1" at 1.0 speed
+		Dispensing 15 uL into well A1 in "1"
+	Aspirating 15.0 uL from well A1 in "1" at 1 speed
+	Dispensing 15.0 uL into well A1 in "2"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A2...H2 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A2 in "1" at 1.0 speed
+		Dispensing 15 uL into well A2 in "1"
+		Aspirating 15 uL from well A2 in "1" at 1.0 speed
+		Dispensing 15 uL into well A2 in "1"
+		Aspirating 15 uL from well A2 in "1" at 1.0 speed
+		Dispensing 15 uL into well A2 in "1"
+	Aspirating 15.0 uL from well A2 in "1" at 1 speed
+	Dispensing 15.0 uL into well A10 in "2"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A3...H3 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A3 in "1" at 1.0 speed
+		Dispensing 15 uL into well A3 in "1"
+		Aspirating 15 uL from well A3 in "1" at 1.0 speed
+		Dispensing 15 uL into well A3 in "1"
+		Aspirating 15 uL from well A3 in "1" at 1.0 speed
+		Dispensing 15 uL into well A3 in "1"
+	Aspirating 15.0 uL from well A3 in "1" at 1 speed
+	Dispensing 15.0 uL into well A2 in "2"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A4...H4 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A4 in "1" at 1.0 speed
+		Dispensing 15 uL into well A4 in "1"
+		Aspirating 15 uL from well A4 in "1" at 1.0 speed
+		Dispensing 15 uL into well A4 in "1"
+		Aspirating 15 uL from well A4 in "1" at 1.0 speed
+		Dispensing 15 uL into well A4 in "1"
+	Aspirating 15.0 uL from well A4 in "1" at 1 speed
+	Dispensing 15.0 uL into well A3 in "2"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A5...H5 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A5 in "1" at 1.0 speed
+		Dispensing 15 uL into well A5 in "1"
+		Aspirating 15 uL from well A5 in "1" at 1.0 speed
+		Dispensing 15 uL into well A5 in "1"
+		Aspirating 15 uL from well A5 in "1" at 1.0 speed
+		Dispensing 15 uL into well A5 in "1"
+	Aspirating 15.0 uL from well A5 in "1" at 1 speed
+	Dispensing 15.0 uL into well A8 in "2"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A6...H6 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A6 in "1" at 1.0 speed
+		Dispensing 15 uL into well A6 in "1"
+		Aspirating 15 uL from well A6 in "1" at 1.0 speed
+		Dispensing 15 uL into well A6 in "1"
+		Aspirating 15 uL from well A6 in "1" at 1.0 speed
+		Dispensing 15 uL into well A6 in "1"
+	Aspirating 15.0 uL from well A6 in "1" at 1 speed
+	Dispensing 15.0 uL into well A9 in "2"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A7...H7 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A7 in "1" at 1.0 speed
+		Dispensing 15 uL into well A7 in "1"
+		Aspirating 15 uL from well A7 in "1" at 1.0 speed
+		Dispensing 15 uL into well A7 in "1"
+		Aspirating 15 uL from well A7 in "1" at 1.0 speed
+		Dispensing 15 uL into well A7 in "1"
+	Aspirating 15.0 uL from well A7 in "1" at 1 speed
+	Dispensing 15.0 uL into well A7 in "2"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A8...H8 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A8 in "1" at 1.0 speed
+		Dispensing 15 uL into well A8 in "1"
+		Aspirating 15 uL from well A8 in "1" at 1.0 speed
+		Dispensing 15 uL into well A8 in "1"
+		Aspirating 15 uL from well A8 in "1" at 1.0 speed
+		Dispensing 15 uL into well A8 in "1"
+	Aspirating 15.0 uL from well A8 in "1" at 1 speed
+	Dispensing 15.0 uL into well A6 in "2"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A9...H9 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A9 in "1" at 1.0 speed
+		Dispensing 15 uL into well A9 in "1"
+		Aspirating 15 uL from well A9 in "1" at 1.0 speed
+		Dispensing 15 uL into well A9 in "1"
+		Aspirating 15 uL from well A9 in "1" at 1.0 speed
+		Dispensing 15 uL into well A9 in "1"
+	Aspirating 15.0 uL from well A9 in "1" at 1 speed
+	Dispensing 15.0 uL into well A11 in "2"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A10...H10 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A10 in "1" at 1.0 speed
+		Dispensing 15 uL into well A10 in "1"
+		Aspirating 15 uL from well A10 in "1" at 1.0 speed
+		Dispensing 15 uL into well A10 in "1"
+		Aspirating 15 uL from well A10 in "1" at 1.0 speed
+		Dispensing 15 uL into well A10 in "1"
+	Aspirating 15.0 uL from well A10 in "1" at 1 speed
+	Dispensing 15.0 uL into well A4 in "2"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A11...H11 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A11 in "1" at 1.0 speed
+		Dispensing 15 uL into well A11 in "1"
+		Aspirating 15 uL from well A11 in "1" at 1.0 speed
+		Dispensing 15 uL into well A11 in "1"
+		Aspirating 15 uL from well A11 in "1" at 1.0 speed
+		Dispensing 15 uL into well A11 in "1"
+	Aspirating 15.0 uL from well A11 in "1" at 1 speed
+	Dispensing 15.0 uL into well A5 in "2"
+	Blowing out
+	Dropping tip well A1 in "12"
+	Picking up tip wells A12...H12 in "3"
+	Mixing 3 times with a volume of 15ul
+		Aspirating 15 uL from well A12 in "1" at 1.0 speed
+		Dispensing 15 uL into well A12 in "1"
+		Aspirating 15 uL from well A12 in "1" at 1.0 speed
+		Dispensing 15 uL into well A12 in "1"
+		Aspirating 15 uL from well A12 in "1" at 1.0 speed
+		Dispensing 15 uL into well A12 in "1"
+	Aspirating 15.0 uL from well A12 in "1" at 1 speed
+	Dispensing 15.0 uL into well A12 in "2"
+	Blowing out
+	Dropping tip well A1 in "12"
+Pausing robot operation

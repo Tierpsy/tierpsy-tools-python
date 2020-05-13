@@ -1,0 +1,411 @@
+Resuming robot operation
+Dropping tip well A1 in "12"
+Picking up tip wells A1...H1 in "6"
+Transferring 7 from well A12 in "9" to wells A12...A1 in "11"
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A12 in "11"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A10 in "11"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A2 in "11"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A11 in "11"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A8 in "11"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A6 in "11"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A9 in "11"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A4 in "11"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A7 in "11"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A3 in "11"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A5 in "11"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A1 in "11"
+Blowing out
+Dropping tip well A1 in "12"
+Transferring 3.0 from wells A1...A12 in "10" to wells A12...A1 in "11"
+Picking up tip wells A1...H1 in "3"
+Aspirating 3.0 uL from well A1 in "10" at 1 speed
+Dispensing 3.0 uL into well A12 in "11"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A2...H2 in "3"
+Aspirating 3.0 uL from well A2 in "10" at 1 speed
+Dispensing 3.0 uL into well A10 in "11"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A3...H3 in "3"
+Aspirating 3.0 uL from well A3 in "10" at 1 speed
+Dispensing 3.0 uL into well A2 in "11"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A4...H4 in "3"
+Aspirating 3.0 uL from well A4 in "10" at 1 speed
+Dispensing 3.0 uL into well A11 in "11"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A5...H5 in "3"
+Aspirating 3.0 uL from well A5 in "10" at 1 speed
+Dispensing 3.0 uL into well A8 in "11"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A6...H6 in "3"
+Aspirating 3.0 uL from well A6 in "10" at 1 speed
+Dispensing 3.0 uL into well A6 in "11"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A7...H7 in "3"
+Aspirating 3.0 uL from well A7 in "10" at 1 speed
+Dispensing 3.0 uL into well A9 in "11"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A8...H8 in "3"
+Aspirating 3.0 uL from well A8 in "10" at 1 speed
+Dispensing 3.0 uL into well A4 in "11"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A9...H9 in "3"
+Aspirating 3.0 uL from well A9 in "10" at 1 speed
+Dispensing 3.0 uL into well A7 in "11"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A10...H10 in "3"
+Aspirating 3.0 uL from well A10 in "10" at 1 speed
+Dispensing 3.0 uL into well A3 in "11"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A11...H11 in "3"
+Aspirating 3.0 uL from well A11 in "10" at 1 speed
+Dispensing 3.0 uL into well A5 in "11"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A12...H12 in "3"
+Aspirating 3.0 uL from well A12 in "10" at 1 speed
+Dispensing 3.0 uL into well A1 in "11"
+Blowing out
+Dropping tip well A1 in "12"
+Pausing robot operation
+Picking up tip wells A2...H2 in "6"
+Resuming robot operation
+Transferring 7 from well A12 in "9" to wells A10...A11 in "8"
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A10 in "8"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A9 in "8"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A2 in "8"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A6 in "8"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A7 in "8"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A1 in "8"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A12 in "8"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A5 in "8"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A3 in "8"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A8 in "8"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A4 in "8"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A11 in "8"
+Blowing out
+Dropping tip well A1 in "12"
+Pausing robot operation
+Resuming robot operation
+Transferring 3.0 from wells A1...A12 in "7" to wells A10...A11 in "8"
+Picking up tip wells A1...H1 in "3"
+Aspirating 3.0 uL from well A1 in "7" at 1 speed
+Dispensing 3.0 uL into well A10 in "8"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A2...H2 in "3"
+Aspirating 3.0 uL from well A2 in "7" at 1 speed
+Dispensing 3.0 uL into well A9 in "8"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A3...H3 in "3"
+Aspirating 3.0 uL from well A3 in "7" at 1 speed
+Dispensing 3.0 uL into well A2 in "8"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A4...H4 in "3"
+Aspirating 3.0 uL from well A4 in "7" at 1 speed
+Dispensing 3.0 uL into well A6 in "8"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A5...H5 in "3"
+Aspirating 3.0 uL from well A5 in "7" at 1 speed
+Dispensing 3.0 uL into well A7 in "8"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A6...H6 in "3"
+Aspirating 3.0 uL from well A6 in "7" at 1 speed
+Dispensing 3.0 uL into well A1 in "8"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A7...H7 in "3"
+Aspirating 3.0 uL from well A7 in "7" at 1 speed
+Dispensing 3.0 uL into well A12 in "8"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A8...H8 in "3"
+Aspirating 3.0 uL from well A8 in "7" at 1 speed
+Dispensing 3.0 uL into well A5 in "8"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A9...H9 in "3"
+Aspirating 3.0 uL from well A9 in "7" at 1 speed
+Dispensing 3.0 uL into well A3 in "8"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A10...H10 in "3"
+Aspirating 3.0 uL from well A10 in "7" at 1 speed
+Dispensing 3.0 uL into well A8 in "8"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A11...H11 in "3"
+Aspirating 3.0 uL from well A11 in "7" at 1 speed
+Dispensing 3.0 uL into well A4 in "8"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A12...H12 in "3"
+Aspirating 3.0 uL from well A12 in "7" at 1 speed
+Dispensing 3.0 uL into well A11 in "8"
+Blowing out
+Dropping tip well A1 in "12"
+Pausing robot operation
+Picking up tip wells A3...H3 in "6"
+Resuming robot operation
+Transferring 7 from well A12 in "9" to wells A5...A10 in "5"
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A5 in "5"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A9 in "5"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A4 in "5"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A8 in "5"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A6 in "5"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A3 in "5"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A12 in "5"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A11 in "5"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A1 in "5"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A7 in "5"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A2 in "5"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A10 in "5"
+Blowing out
+Dropping tip well A1 in "12"
+Transferring 3.0 from wells A1...A12 in "4" to wells A5...A10 in "5"
+Picking up tip wells A1...H1 in "3"
+Aspirating 3.0 uL from well A1 in "4" at 1 speed
+Dispensing 3.0 uL into well A5 in "5"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A2...H2 in "3"
+Aspirating 3.0 uL from well A2 in "4" at 1 speed
+Dispensing 3.0 uL into well A9 in "5"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A3...H3 in "3"
+Aspirating 3.0 uL from well A3 in "4" at 1 speed
+Dispensing 3.0 uL into well A4 in "5"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A4...H4 in "3"
+Aspirating 3.0 uL from well A4 in "4" at 1 speed
+Dispensing 3.0 uL into well A8 in "5"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A5...H5 in "3"
+Aspirating 3.0 uL from well A5 in "4" at 1 speed
+Dispensing 3.0 uL into well A6 in "5"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A6...H6 in "3"
+Aspirating 3.0 uL from well A6 in "4" at 1 speed
+Dispensing 3.0 uL into well A3 in "5"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A7...H7 in "3"
+Aspirating 3.0 uL from well A7 in "4" at 1 speed
+Dispensing 3.0 uL into well A12 in "5"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A8...H8 in "3"
+Aspirating 3.0 uL from well A8 in "4" at 1 speed
+Dispensing 3.0 uL into well A11 in "5"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A9...H9 in "3"
+Aspirating 3.0 uL from well A9 in "4" at 1 speed
+Dispensing 3.0 uL into well A1 in "5"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A10...H10 in "3"
+Aspirating 3.0 uL from well A10 in "4" at 1 speed
+Dispensing 3.0 uL into well A7 in "5"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A11...H11 in "3"
+Aspirating 3.0 uL from well A11 in "4" at 1 speed
+Dispensing 3.0 uL into well A2 in "5"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A12...H12 in "3"
+Aspirating 3.0 uL from well A12 in "4" at 1 speed
+Dispensing 3.0 uL into well A10 in "5"
+Blowing out
+Dropping tip well A1 in "12"
+Pausing robot operation
+Picking up tip wells A4...H4 in "6"
+Resuming robot operation
+Transferring 7 from well A12 in "9" to wells A3...A2 in "2"
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A3 in "2"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A1 in "2"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A9 in "2"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A10 in "2"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A6 in "2"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A5 in "2"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A7 in "2"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A8 in "2"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A11 in "2"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A12 in "2"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A4 in "2"
+Blowing out
+Aspirating 7.0 uL from well A12 in "9" at 1 speed
+Dispensing 7.0 uL into well A2 in "2"
+Blowing out
+Dropping tip well A1 in "12"
+Transferring 3.0 from wells A1...A12 in "1" to wells A3...A2 in "2"
+Picking up tip wells A1...H1 in "3"
+Aspirating 3.0 uL from well A1 in "1" at 1 speed
+Dispensing 3.0 uL into well A3 in "2"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A2...H2 in "3"
+Aspirating 3.0 uL from well A2 in "1" at 1 speed
+Dispensing 3.0 uL into well A1 in "2"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A3...H3 in "3"
+Aspirating 3.0 uL from well A3 in "1" at 1 speed
+Dispensing 3.0 uL into well A9 in "2"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A4...H4 in "3"
+Aspirating 3.0 uL from well A4 in "1" at 1 speed
+Dispensing 3.0 uL into well A10 in "2"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A5...H5 in "3"
+Aspirating 3.0 uL from well A5 in "1" at 1 speed
+Dispensing 3.0 uL into well A6 in "2"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A6...H6 in "3"
+Aspirating 3.0 uL from well A6 in "1" at 1 speed
+Dispensing 3.0 uL into well A5 in "2"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A7...H7 in "3"
+Aspirating 3.0 uL from well A7 in "1" at 1 speed
+Dispensing 3.0 uL into well A7 in "2"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A8...H8 in "3"
+Aspirating 3.0 uL from well A8 in "1" at 1 speed
+Dispensing 3.0 uL into well A8 in "2"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A9...H9 in "3"
+Aspirating 3.0 uL from well A9 in "1" at 1 speed
+Dispensing 3.0 uL into well A11 in "2"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A10...H10 in "3"
+Aspirating 3.0 uL from well A10 in "1" at 1 speed
+Dispensing 3.0 uL into well A12 in "2"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A11...H11 in "3"
+Aspirating 3.0 uL from well A11 in "1" at 1 speed
+Dispensing 3.0 uL into well A4 in "2"
+Blowing out
+Dropping tip well A1 in "12"
+Picking up tip wells A12...H12 in "3"
+Aspirating 3.0 uL from well A12 in "1" at 1 speed
+Dispensing 3.0 uL into well A2 in "2"
+Blowing out
+Dropping tip well A1 in "12"
+Pausing robot operation

@@ -1,0 +1,7 @@
+pandas
+numpy
+pathlib
+h5py
+time
+distutils
+warnings
