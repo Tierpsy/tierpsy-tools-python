@@ -99,15 +99,16 @@ def parse_camera_serial(filename):
     return camera_serial
 
 
-def find_imgstore_videos(target_dir):
+def find_imgstore_videos(target):
     """
-    find_imgstore_videos scans the target_dir and returns a dataframe
-    with information about the videos found.
+    find_imgstore_videos scans the target directory, or the target files list,
+    and returns a dataframe with information about the videos found.
 
     Parameters
     ----------
-    target_dir : str or pathlib.Path
-        path to the directory cointaining multiple imgstore files.
+    target : str or pathlib.Path
+        path to the directory cointaining multiple imgstore files or to a file
+        containing a list thereof.
 
     Returns
     -------
@@ -123,11 +124,18 @@ def find_imgstore_videos(target_dir):
     """
 
     # input check
-    if isinstance(target_dir, str):
-        target_dir = Path(target_dir)
+    if isinstance(target, str):
+        target = Path(target)
 
     # find all yamls
-    imgstore_yamls = list(target_dir.rglob("metadata.yaml"))
+    if target.is_dir():
+        imgstore_yamls = list(target.rglob("metadata.yaml"))
+    elif target.is_file():
+        with open(target, 'r') as fid:
+            imgstore_yamls = [Path(yaml) for yaml in fid.read().splitlines()]
+    else:
+        TypeError('Target needs to be the path to a directory or a file.')
+
 
     # now loop on imgstore yamls and return:
     # 1) the parent directory

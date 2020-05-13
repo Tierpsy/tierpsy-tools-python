@@ -9,7 +9,7 @@ Created on Mon Apr 20 15:41:09 2020
 import numpy as np
 from warnings import warn
 from pathlib import Path
-from hydra_filenames_helper import find_imgstore_videos
+from tierpsytools.hydra.hydra_filenames_helper import find_imgstore_videos
 import re
 import pandas as pd
 
