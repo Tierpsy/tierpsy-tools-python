@@ -931,7 +931,9 @@ if __name__ == '__main__':
     day_metadata = get_day_metadata(plate_metadata, manual_meta_file, saveto=metadata_file)
 
     #%% Example 4: syngenta screen  - use a copy of day of metadata from behavgenom
-    day_root_dir = Path('/Users/ibarlow/Desktop/tierpsytools_checks/SyngentaScreen/20191213')
+    from tierpsytools import EXAMPLES_DIR
+    
+    day_root_dir = EXMAPLES_DIR / Path('hydra_metadata/data/AuxiliaryFiles/20191213')
     sourceplate_file = day_root_dir / '20191212_sourceplates.csv'
     wormsorter_file = day_root_dir / '20191213_wormsorter.csv'
     manual_meta_file = day_root_dir / '20191213_manual_metadata.csv'
@@ -972,14 +974,17 @@ if __name__ == '__main__':
                                            robot_metadata.iterrows()]
     robot_metadata.to_csv(str(sourceplate_file).replace('.csv', '_shuffled.csv'),
                           index=False)
-    # %% Example 6: with Syngenta 12 strain screen
-    day_root_dir = Path('/Users/ibarlow/Desktop/tierpsytools_checks/SyngentaStrainScreen/20200220')
+    
+    # %% Example 6: with Syngenta 12 strain screen   
+    from tierpsytools import EXAMPLES_DIR
+    
+    day_root_dir = EXAMPLES_DIR / Path('hydra_metadata/data/AuxiliaryFiles/20200220')
     manual_meta_file = day_root_dir / '20200220_manual_metadata.csv'
     wormsorter_file = day_root_dir / '20200220_wormsorter.csv'
     bad_wells_file = day_root_dir / '20200220_robot_bad_imaging_wells.csv'
     metadata_file = day_root_dir / '20200220_day_metadata.csv'
+    sourceplates =EXAMPLES_DIR / Path('sourceplates')
 
-    sourceplates =Path('//Users/ibarlow/Desktop/tierpsytools_checks/SyngentaStrainScreen/sourceplates')
     sourceplates = list(sourceplates.rglob('*shuffled.csv'))
     drug_plates = []
     for file in sourceplates:
