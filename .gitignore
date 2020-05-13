@@ -1,4 +1,5 @@
 *.pyc
+*.profraw
 *.o
 *.DS_Store
 tierpsytools_python.egg-info/
