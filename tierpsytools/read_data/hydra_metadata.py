@@ -58,30 +58,32 @@ def read_hydra_metadata(
 
     Parameters
     ----------
-    feat : TYPE
-        DESCRIPTION.
-    fname : TYPE
-        DESCRIPTION.
-    meta : TYPE
-        DESCRIPTION.
-    feat_id_cols : TYPE, optional
-        DESCRIPTION. The default is ['file_id', 'well_name', 'is_good_well'].
-    add_bluelight : TYPE, optional
-        DESCRIPTION. The default is True.
-    bluelight_label_location_in_imgstore_stem : TYPE, optional
-        DESCRIPTION. The default is 3.
-
-    Raises
-    ------
-    ValueError
-        DESCRIPTION.
+    feat : dataframe size =
+           (n_wells_with_features*n_bluelight_conditions,
+           n_features + len(feat_id_cols))
+        The tierpsy features_summaries read into a dataframe.
+        Must have a file_id and well_id column.
+    fname : dataframe size = (n_files, n_cols)
+        The tierpsy filenames_summaries read into a dataframe. Must have a
+        file_id and filename column.
+    meta : dataframe size = (n_wells_screened*n_bluelight_conditions, n_meta_cols)
+        The experiment full metadata read into a dataframe.
+    feat_id_cols : list of strings, optional
+        The columns in the feat dataframe that are not features.
+        The default is ['file_id', 'well_name', 'is_good_well'].
+    add_bluelight : bool, optional
+        Add a metadata column that specifies the bluelight condition for each row.
+        The default is True.
+    bluelight_label_location_in_imgstore_stem : int, optional
+        Where to file the bluelight specification in the imgstore name.
+        The default is 3.
 
     Returns
     -------
-    TYPE
-        DESCRIPTION.
-    newmeta : TYPE
-        DESCRIPTION.
+    feat: dataframe shape = (n_wells_with_features*n_bluelight_conditions, n_features)
+        Features dataframe containing only feature columns..
+    newmeta : dataframe shape = (n_wells_with_features*n_bluelight_conditions, n_meta_cols)
+        Metadata dataframe matching the returned feat dataframe row-by-row.
 
     """
     if 'filename' in fname:
@@ -134,23 +136,36 @@ def align_bluelight_conditions(
 
     Parameters
     ----------
-    feat : TYPE
-        DESCRIPTION.
-    meta : TYPE
-        DESCRIPTION.
-    how : TYPE, optional
-        DESCRIPTION. The default is 'outer'.
-    return_separate_feat_dfs : TYPE, optional
-        DESCRIPTION. The default is False.
-    bluelight_specific_meta_cols : TYPE, optional
-        DESCRIPTION. The default is ['imgstore_name', 'file_id', 'bluelight'].
-    merge_on_cols : TYPE, optional
-        DESCRIPTION. The default is ['date_yyyymmdd','imaging_plate_id','well_name'].
+    feat: dataframe shape = (n_wells_with_features*n_bluelight_conditions, n_features)
+        Features dataframe containing only feature columns..
+    meta : dataframe shape = (n_wells_with_features*n_bluelight_conditions, n_meta_cols)
+        Metadata dataframe matching the feat dataframe row-by-row.
+    how : string, optional
+        Specifies merge type. The default is 'outer'.
+    return_separate_feat_dfs : bool, optional
+        If True, three different dataframes will be returned, one for each
+        bluelight condition. The default is False.
+    bluelight_specific_meta_cols : list of strings, optional
+        The metadata columns that have different values for each bluelight condition.
+        The default is ['imgstore_name', 'file_id', 'bluelight'].
+    merge_on_cols : list of strings, optional
+        The metadata columns that together point to a unique well.
+        The default is ['date_yyyymmdd','imaging_plate_id','well_name'].
 
     Returns
     -------
-    TYPE
-        DESCRIPTION.
+    IF return_separate_feat_dfs:
+        feat: dataframe shape = (n_wells, n_features * n_bluelight_conditions)
+            The features at every bluelight condition for each well.
+        meta: dataframe shape = (n_wells, n_meta_cols)
+            The metadata tht match the returned feat dataframe row-by-row
+
+    ELSE:
+        (feat_prestim, feat_bluelight, feat_poststim): tuple of dataframes
+                each one with shape = (n_wells, n_features)
+            The features at every bluelight condition for each well.
+        meta: dataframe shape = (n_wells, n_meta_cols)
+            The metadata that match the returned feat dataframes row-by-row.
 
     """
 
