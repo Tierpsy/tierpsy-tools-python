@@ -7,13 +7,13 @@ tierpsytools is a Python library for dealing with metadata in worm screening exp
 To install tierpsytools clone the repository from github:
 
 ```bash
-git clone https://github.com/em812/tierpsytools_python.git
+git clone https://github.com/Tierpsy/tierpsy-tools-python.git
 ```
 
-Go in the tierpsytools_python directory:
+Go in the tierpsy-tools-python directory:
 
 ```bash
-cd tierpsytools_python
+cd tierpsy-tools-python
 ```
 
 and install the package with:
