@@ -36,14 +36,14 @@ class scalingClass():
     """
 
     ## Initiate class
-    def __init__(self, function='standardize', axis=None, norm='l2'):
+    def __init__(self, scaling='standardize', axis=None, norm='l2'):
         ## Define class attributes
-        self.scaling = function
+        self.scaling = scaling
         self.std_ = None
         self.mean_ = None
         self.min_ = None
         self.diff_ = None
-        if axis is None and function == 'normalize':
+        if axis is None and scaling == 'normalize':
             self.axis_ = 1
         else:
             self.axis_ = 0

@@ -5,3 +5,6 @@ h5py
 time
 distutils
 warnings
+statsmodels
+matplotlib
+sklearn
