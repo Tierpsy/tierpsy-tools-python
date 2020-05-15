@@ -203,30 +203,57 @@ def populate_96WPs(worm_sorter,
                    del_if_exists=False
                    ):
     """
-    @author: ilbarlow
-    Populate 96 well plates for tracking experiment where plates have been
-    filled with different strains of food or worms.
-    param:
-        worm_sorter: path for YYYYMMDD_wormsorter.csv file
-    return:
-        plate_metadata: one line per well; can be used in get_day_metadata
-            function to compile with manual metadata
-    """
+    @author: ilbarlow   
 
+    Parameters
+    ----------
+    worm_sorter : .csv file with headers 'start_row', 'end_row', 'start_column',
+    'end_column'
+        .
+    entire_rows : TYPE, optional
+        DESCRIPTION. The default is True.
+    saveto : None or path or default
+        DESCRIPTION. The default is None.
+    del_if_exists : Bool, optional
+        DESCRIPTION. The default is False.
+
+    Returns
+    -------
+    plate_metadata: one line per well; can be used in get_day_metadata
+            function to compile with manual metadata
+
+    
+    """
+    
     # parameters for the 96WPs
     n_columns = 12
     column_names = np.arange(1, n_columns+1)
     row_names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
     well_names = list(itertools.product(row_names, column_names))
+    total_nwells = len(well_names)
 #    well_names = [i[0]+str(i[1]) for i in well_names]
+    
+    DATE = worm_sorter.stem.split('_')[0]
+    wormsorter_log_fname = Path(worm_sorter).parent / '{}_wormsorter_errorlog.txt'.format(DATE)
+    wormsorter_log_fname.touch()
 
-    # saving and overwriting checks
-    if saveto is None:
-        date = worm_sorter.stem.split('_')[0]
-        saveto = Path(worm_sorter).parent / (date+'_plate_metadata.csv')
+    # checking if and where to save the file
+    if saveto == None:
+        print ('plate metadata file will not be saved')
+    
+    else:
+        try:
+            Path(saveto).touch()
+            
+        except FileNotFoundError:
+            print ('saveto file invalid, saving to default filename')
+            saveto = 'default'
+        
+        if saveto == 'default':
+            saveto = Path(worm_sorter).parent / ('{}_plate_metadata.csv'.format(DATE))
+            print ('saving to {}'.format(saveto))
 
-    # check if file exists
-    if (saveto is not False) and (saveto.exists()):
+    if (saveto is not None) and (saveto.exists()):
         if del_if_exists:
             warnings.warn('Plate metadata file {} already '.format(saveto)
                           + 'exists.File will be overwritten.')
@@ -278,6 +305,22 @@ def populate_96WPs(worm_sorter,
                 pd.concat([_section, _details], axis=1, sort=True))
 
     plate_metadata = pd.concat(plate_metadata)
+    
+    # do check to make sure there aren't multiple  plates
+    plate_errors =  []
+    unique_plates = plate_metadata['imaging_plate_id'].unique()
+    
+    for plate in unique_plates:
+        if plate_metadata[plate_metadata['imaging_plate_id'] == plate].shape[0] > total_nwells:
+            warnings.warn('{}: more than {} wells'.format(plate, total_nwells))            
+            plate_errors.append(plate)
+            with open(wormsorter_log_fname, 'a') as fid:
+                fid.write(plate + '\n')
+    
+    if len(plate_errors) == 0:
+        with open(wormsorter_log_fname, 'a') as fid:
+            fid.write ('No wormsorter plate errors \n')
+            
     plate_metadata.to_csv(saveto, index=False)
 
     return plate_metadata
@@ -799,6 +842,46 @@ def day_metadata_check(day_metadata, day_root_dir, plate_size=96):
 
             return files_to_check
 
+
+# %%
+def number_wells_per_plate(day_metadata, day_root_dir):
+    """
+    author @ibarlow
+
+    Function that returns a csv listing all the wells and the total number of
+    wells per plate
+    Parameters
+    ----------
+    day_metadata : dataframe, must have columns 'imaging_plate_id' and 'well_name'
+        DESCRIPTION.
+    day_root_dir : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    .csv and dataframe of plate summary
+
+    """
+    
+    saveto = day_root_dir / '{}_wells_per_plate.csv'.format(day_root_dir.stem)
+    
+    imaging_plates = day_metadata['imaging_plate_id'].unique()
+    
+    plate_summary_df = []
+    for plate in imaging_plates:
+        plate_summary_df.append(pd.DataFrame().from_dict(
+            {'imaging_plate_id': plate,
+             'all_wells': [day_metadata[day_metadata[
+                 'imaging_plate_id'] == plate]['well_name'].unique()],
+             'number_wells': day_metadata[day_metadata[
+                 'imaging_plate_id'] == plate]['well_name'].unique().shape[0]}))
+    
+    plate_summary_df = pd.concat(plate_summary_df)
+    plate_summary_df.to_csv(saveto, index=False)
+    
+    return plate_summary_df
+
+
 #%%
 # STEP 3:
 def concatenate_days_metadata(
@@ -993,7 +1076,9 @@ if __name__ == '__main__':
 
     #run functions to populate
     plate_metadata = populate_96WPs(wormsorter_file,
-                                    del_if_exists=True)
+                                    del_if_exists=True,
+                                    saveto='default')
+    
     bad_wells_df = convert_bad_wells_lut(bad_wells_file)
     plate_metadata = pd.merge(plate_metadata,
                               bad_wells_df,
@@ -1031,3 +1116,6 @@ if __name__ == '__main__':
     files_to_check = day_metadata_check(day_metadata,
                                         day_root_dir,
                                         plate_size=48) # set to 48 as some half plates
+    number_wells_per_plate(day_metadata,
+                           day_root_dir)
+    
