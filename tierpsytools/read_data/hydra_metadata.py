@@ -7,40 +7,34 @@ Created on Tue Apr  7 15:52:14 2020
 """
 
 import pandas as pd
+from pathlib import Path
 import pdb
 
 def add_bluelight_label(
-        meta, filename_column='imgstore_name', split_string='_', location=3
+        meta, filename_column='imgstore_name', split_string='_',
+        labels=['prestim', 'bluelight', 'poststim']
         ):
-    from pathlib import Path
+
+    from numpy import nan
 
     if 'bluelight' in meta:
         return meta
 
-    bluelight = meta[filename_column].apply(
-        lambda x: Path(x).stem.split(split_string)[location])
+    def _bluelight_from_filename(fname):
+        split = Path(fname).stem.split(split_string)
+        isin = [x in split for x in labels]
+        label = [l for (l, i) in zip(labels, isin) if i]
+        if len(label) == 1:
+            return label[0]
+        else:
+            return nan
+
+    bluelight = meta[filename_column].apply(_bluelight_from_filename)
     meta.insert(0, 'bluelight', bluelight)
     return meta
 
 
-def imgstore_name_from_filename(filename, path_levels=[-3,-1]):
-    """
-
-
-    Parameters
-    ----------
-    filename : TYPE
-        DESCRIPTION.
-    path_levels : TYPE, optional
-        DESCRIPTION. The default is [-3,-1].
-
-    Returns
-    -------
-    imgstore_name : TYPE
-        DESCRIPTION.
-
-    """
-    from pathlib import Path
+def _imgstore_name_from_filename(filename, path_levels=[-3,-1]):
 
     imgstore_name = '/'.join(Path(filename).parts[path_levels[0]:path_levels[1]])
     return imgstore_name
@@ -49,8 +43,8 @@ def imgstore_name_from_filename(filename, path_levels=[-3,-1]):
 def read_hydra_metadata(
         feat, fname, meta,
         feat_id_cols = ['file_id', 'well_name', 'is_good_well'],
-        add_bluelight=True, bluelight_label_location_in_imgstore_stem=3):
-    # TODO: change the default position counting from the end or look for specific words.
+        add_bluelight=True,
+        bluelight_labels=['prestim', 'bluelight', 'poststim']):
     """
     Creates matching features and metadata dfs from the .csv files of a hydra
     screening (assuming the standardized format of tierpsy and hydra metadata
@@ -113,7 +107,7 @@ def read_hydra_metadata(
 
     if add_bluelight:
         newmeta = add_bluelight_label(
-            newmeta, location=bluelight_label_location_in_imgstore_stem)
+            newmeta, labels=bluelight_labels)
 
     assert newmeta.shape[0] == feat.shape[0]
 
