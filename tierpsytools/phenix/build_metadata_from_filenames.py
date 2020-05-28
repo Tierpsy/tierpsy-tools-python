@@ -8,6 +8,8 @@ Created on Fri May 24 17:34:22 2019
 
 from pathlib import Path
 import pandas as pd
+import re
+import datetime
 
 def get_digit(string, dtype=float):
     if dtype == int:
@@ -158,6 +160,76 @@ def meta_syngenta_archive_from_filenames(filenames):
     metadata.reset_index(drop=True,inplace=True)
 
     return metadata
+
+def meta_from_filenames_venoms(filelist,
+                               extract_channels=True):
+    """
+    author @ibarlow
+
+    Function that extracts the filenames from the venoms data
+    .mjpg vidoes used to acquire the data and 
+    and so channels have not been converted to 1,2,3,4,5,6 when transferred to
+    behavgenom
+    
+    Parameters
+    ----------
+    filelist : list of files to extract metadata from 
+        DESCRIPTION.
+    extract_channels: Bool
+        detault is True
+
+    Returns
+    -------
+    meta : TYPE
+        DESCRIPTION.
+
+    """
+    run_regex = r"(?<=run|set)\d{1,}"
+    camera_regex =r"(?<=Ch)\d{1,}"
+    date_regex = r"(?<=_)\d{8,}(?=_)"  
+    channel_dict = {(1, 1): 1,
+                    (1, 2): 2,
+                    (2, 1): 3,
+                    (2, 2): 4,
+                    (3, 1): 5,
+                    (3, 2): 6}
+ 
+    filenames = [Path(file) for file in filelist]
+                           
+    meta= []
+    for count, file in enumerate(filenames):
+        meta.append(pd.Series({'venom_type': file.stem.split('_')[0],
+                               'run_number': re.findall(run_regex,
+                                                        file.stem)[0],
+                               'camera_number': int(re.findall(camera_regex,
+                                                           file.stem)[0]),
+                               'PC_number': int(file.parts[-3][-1]),
+                               'date_YYYYMMDD': datetime.datetime.strptime(
+                                   re.search(date_regex,
+                                             str(file))[0],
+                                   '%d%m%Y').strftime('%Y%m%d'),
+                               'filename': file}).to_frame(
+                                       ).transpose())
+    
+    meta = pd.concat(meta)
+    meta.reset_index(drop=True, inplace=True)
+    if extract_channels:
+        meta['channel'] = pd.Series(zip(meta['PC_number'],
+                                        meta['camera_number'])).map(
+                                            channel_dict)
+    else:
+        meta.rename(columns = {'camera_number': 'channel'})
+        
+    meta.sort_values(by=['date_YYYYMMDD',
+                        'run_number',
+                        'channel'],
+                     inplace=True,
+                     ignore_index=True)
+    meta.reset_index(drop=True,
+                     inplace=True)
+    
+    return meta
+
 
 
 def match_metadata_and_clean_features(
