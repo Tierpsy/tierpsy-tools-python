@@ -28,12 +28,11 @@ def subsample_mjpg(fname,
     ----------
     fname : string or pathname
         DESCRIPTION.
-    outfie : string or pathname
+    outfile : string or pathname
         DESCRIPTION.
     frame_rate : frames per second
         DESCRIPTION.
     subsample_size : in minutes
-
         DESCRIPTION.
     imgsize : size per frame in pixels
         DESCRIPTION.
@@ -69,6 +68,8 @@ def subsample_mjpg(fname,
             count += 1
         else:
             vidcap.release()
+    return
+
 
 #%% EXAMPLE
 
@@ -76,9 +77,12 @@ def subsample_mjpg(fname,
 if __name__ == '__main__':
 
     # input a .csv that contains files that you want to subsample
-    file_list = Path('/Users/ibarlow/OneDrive - Imperial College London/Documents/Ilastik/venoms/RawVideos/subsample_test.csv')
+    file_list = Path('/Volumes/behavgenom$/Ida/Data/Phenix/venom_subsampling/venom_outliers.csv')
     fnames = pd.read_csv(file_list)
     
+    fnames['fname'] = [r.fname.replace('hdf5', 'mjpg'
+                                       ).replace('MaskedVideos_20200513', 'RawVideos')
+                       for i,r in fnames.iterrows()]
     # add in an extra column that specifies the output file
     fnames['outfile'] = [file_list.parent / 
                          str(Path(r.fname).stem + 'subsample.avi') 
@@ -86,8 +90,12 @@ if __name__ == '__main__':
 
     for i, r in fnames.iterrows():
         print(i)
+        
         try:
-            subsample_mjpg(r.fname, r.outfile)
+            if not r.outfile.exists():
+                subsample_mjpg(r.fname, r.outfile)
+            else:
+                print('{} video already exists'.format(r.outfile))
         except Exception as error:
             print (error)
 
