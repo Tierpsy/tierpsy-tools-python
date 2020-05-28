@@ -88,7 +88,7 @@ def read_hydra_metadata(
         raise ValueError('The filenames dataframe needs to have a filename column.')
 
     fname['imgstore_name'] = fname[filename].apply(
-        lambda x: imgstore_name_from_filename(x,path_levels=[-3,-1]))
+        lambda x: _imgstore_name_from_filename(x,path_levels=[-3,-1]))
 
     newmeta = feat[feat_id_cols]
 
