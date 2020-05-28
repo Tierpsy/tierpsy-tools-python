@@ -8,3 +8,4 @@ warnings
 statsmodels
 matplotlib
 sklearn
+opencv=3.4.2
