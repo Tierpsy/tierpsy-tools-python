@@ -5,6 +5,7 @@ Created on Wed Apr  8 19:28:09 2020
 
 @author: em812
 """
+import numpy as np
 
 def remove_MOAs_based_on_drug_count(
         feat, meta,
@@ -65,7 +66,7 @@ def remove_MOAs_based_on_drug_count(
 def remove_drugs_with_low_effect_univariate(
         feat, meta,
         threshold=0.05, fdr=0.05, test_each_dose=False,
-        keep_names=['DMSO', 'NoCompound'], return_nonsignificant=False,
+        keep_names=['DMSO', 'NoCompound'],
         drugname_column = 'drug_type', drugdose_column = 'drug_dose'
         ):
     """
@@ -78,7 +79,8 @@ def remove_drugs_with_low_effect_univariate(
         feat : dataframe
             feature dataframe
         meta : dtaframe
-            dataframe with metadata
+            dataframe with metadata contraining a drugname_column and a
+            drugdose_column
         threshold : float < 1.0 and < 0.0
             percentage of significant features detected to consider that the
             compound has significant effect
@@ -104,20 +106,29 @@ def remove_drugs_with_low_effect_univariate(
         drugdose_column : string
             the name of the column in meta that contains the drug doses
     return:
-        feat = feature dataframe with low-potency drugs removed
-        samples = dataframe with sample identification data corresponding to returned feat dataframe
+        signif_effect_drugs : list
+        low_effect_drugs : list
+        significant : dictionary
+            mask of significant features for each drug name
     """
-    import numpy as np
     from sklearn.feature_selection import SelectFdr, f_classif
     import pdb
+    from statsmodels.stats.multitest import multipletests
 
-    n_feat = feat.shape[1]
-    drug_names = meta[drugname_column].unique()
+    if meta[drugname_column].isna().any():
+        raise ValueError('Drug names contain nan values.')
 
-    significant_drugs = []
+    if keep_names is None:
+        keep_names = []
+
+    #n_feat = feat.shape[1]
+    drug_names = meta.loc[
+        ~meta[drugname_column].isin(keep_names), drugname_column].unique()
+
+    pvals = []
     for idrug,drug in enumerate(drug_names):
-        if drug in keep_names:
-            continue
+        print('Univariate tests for compound {}...'.format(drug))
+
         # For each dose get significant features using Benjamini-Hochberg
         # method with FDR=fdr
         X = feat[meta[drugname_column].isin([drug,'DMSO'])]
@@ -130,42 +141,50 @@ def remove_drugs_with_low_effect_univariate(
                 selector.fit(X, y)
             except ValueError:
                 pdb.set_trace()
-            n_sign_feat = np.sum(selector.get_support())
-            if n_sign_feat > threshold*n_feat:
-                significant_drugs.append(drug)
+
+            pvals.append(np.asarray(selector.pvalues_))
+
         else:
-            n_sign_feat = []
+            _pvals=[]
             for idose, dose in enumerate(y.unique()):
                 if dose == 0:
                     continue
                 selector.fit(X[np.isin(y,[0,dose])], y[np.isin(y,[0,dose])])
-                n_sign_feat.append(np.sum(selector.get_support()))
 
-            if np.any([n>threshold*n_feat for n in n_sign_feat]):
-                significant_drugs.append(drug)
+                _pvals.append(np.asarray(selector.pvalues_))
 
-    # If DMSO was in drug list, include it in the final dataframe
-    # (default behaviour)
-    if keep_names is not None:
-        significant_drugs.extend(keep_names)
+            pvals.append(_pvals)
 
-    feat = feat[meta[drugname_column].isin(significant_drugs)]
-    meta = meta[meta[drugname_column].isin(significant_drugs)]
-
-    if return_nonsignificant:
-        return feat, meta, list(
-            set(drug_names).difference(set(significant_drugs))
+    try:
+        significant,_,_,_ = multipletests(
+            np.vstack(pvals).reshape(-1), alpha=fdr, method='fdr_bh',
+            is_sorted=False, returnsorted=False
             )
+    except:
+        pdb.set_trace()
+
+    if not test_each_dose:
+        significant = significant.reshape(np.array(pvals).shape)
+        signif_effect_drugs = np.any(significant, axis=1)
     else:
-        return feat, meta
+        significant = significant.reshape(-1, X.shape[1])
+        ndose = [len(x) for x in pvals]
+        significant = np.split(significant, np.cumsum(ndose))[:-1]
+        signif_effect_drugs = np.any([np.any(x, axis=0) for x in significant], axis=1)
+
+    signif_effect_drugs = np.append(drug_names[signif_effect_drugs], keep_names)
+    low_effect_drugs = drug_names[~np.isin(drug_names, signif_effect_drugs)]
+
+    significant = {drug:mask for drug,mask in zip(drug_names, significant)}
+
+    return signif_effect_drugs, low_effect_drugs, significant
 
 def remove_drugs_with_low_effect_multivariate(
         feat, meta, signif_level=0.05,
         cov_estimator = 'EmpiricalCov',
         drugname_column = 'drug_type',
         dose_column = 'drug_dose',
-        keep_names = ['DMSO', 'NoCompound'],
-        return_nonsignificant = False
+        keep_names = ['DMSO', 'NoCompound']
         ):
     """
     Remove drugs when all the doses of the drug are very close to DMSO.
@@ -183,18 +202,20 @@ def remove_drugs_with_low_effect_multivariate(
             test for each drug dose based on the MD^2 distribution.
         cov_estimator : 'RobustCov' or 'EmpiricalCov'
             Specifies the method to estimate the covariance matrix.
-        return_nonsignificant : bool, optional
-            return the names of the drugs that are removed from the
-            dataset
+
     return:
-        feat : dataframe
-            feature dataframe with low-potency drugs removed
-        meta : dataframe
-            metadata dataframe with low-potency drugs removed
+        signif_effect_drugs : list
+        low_effect_drugs : list
+        mah_dist : dictionary
+            A dictionary with the mahalanobis distances per dose for every
+            drug name
     """
     from sklearn.covariance import MinCovDet, EmpiricalCovariance
     from scipy.stats import chi2
     from time import time
+
+    if meta[drugname_column].isna().any():
+        raise ValueError('Drug names contain nan values.')
 
     if cov_estimator == 'RobustCov':
         estimator = MinCovDet()
@@ -235,13 +256,8 @@ def remove_drugs_with_low_effect_multivariate(
             signif_effect_drugs.append(drug)
 
     signif_effect_drugs.extend(keep_names)
+    low_effect_drugs = drug_names[~np.isin(drug_names, signif_effect_drugs)]
 
-    feat = feat[meta[drugname_column].isin(signif_effect_drugs)]
-    meta = meta[meta[drugname_column].isin(signif_effect_drugs)]
+    return signif_effect_drugs, low_effect_drugs, mah_dist
 
-    if return_nonsignificant:
-        return feat, meta, list(
-            set(drug_names).difference(set(signif_effect_drugs))
-            ), mah_dist
-    else:
-        return feat, meta
+

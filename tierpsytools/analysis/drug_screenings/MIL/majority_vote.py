@@ -44,34 +44,33 @@ def get_seen_compounds(Xtest, ytest, ytrain):
 
     return Xtest,ytest,seen
 
-def majority_vote_CV(
-        feat, moa_group, drug_names, estimator, splitter, scale_function=None):
-    from tierpsytools.analysis.classification_tools import get_fscore
-    from scaling_class import scalingClass
+def majority_vote_LeaveOneBagOut_CV(
+        X, y, group, estimator, scale_function=None):
+    from tierpsytools.feature_processing.scaling_class import scalingClass
     from sklearn.metrics import accuracy_score
+    from sklearn.model_selection import LeaveOneOut
     ## Majority vote
     #---------------
-    # Make feature matrix with bags of sample points per compound
-    X=[]
-    y=[]
-    groups=[]
-    for (cmpd_name,cmpd_feat) in feat.groupby(by=drug_names):
-        #print(cmpd_name,cmpd_feat.shape[0])
-            X.append(cmpd_feat.values)
-            y.append(moa_group[drug_names==cmpd_name])
-            groups.append(drug_names[drug_names==cmpd_name])
-    X = np.array(X)
-    y=np.array(y)
+    splitter = LeaveOneOut()
 
-    y_pred = np.array([[np.nan for i in range(y[j].shape[0])] for j in range(y.shape[0])])
-    for train_index, test_index in splitter.split(X, y):
-        X_train = np.concatenate(X[train_index])
-        X_test = np.concatenate(X[test_index])
-        y_train = np.concatenate(y[train_index])
-        #y_test = np.concatenate(y[test_index])
+    # Make feature matrix with bags of sample points per compound
+    ugroups = np.unique(group)
+
+    Xb = np.array([X[group==grp] for grp in ugroups])
+    yb = np.array([y[group==grp] for grp in ugroups])
+    groupb = np.array([group[group==grp] for grp in ugroups])
+
+    scores = []
+    scores_maj = []
+    for train_index, test_index in splitter.split(Xb, yb):
+        X_train = np.concatenate(Xb[train_index])
+        X_test = np.concatenate(Xb[test_index])
+        y_train = np.concatenate(yb[train_index])
+        y_test = np.concatenate(yb[test_index])
+        group_test = np.concatenate(groupb[test_index])
 
         # Normalize
-        scaler = scalingClass(function=scale_function)
+        scaler = scalingClass(scaling=scale_function)
         X_train = scaler.fit_transform(X_train)
         X_test = scaler.transform(X_test)
 
@@ -79,24 +78,84 @@ def majority_vote_CV(
         estimator.fit(X_train,y_train)
 
         # Predict
-        y_pred[np.squeeze(test_index)] = estimator.predict(X_test)
+        y_pred = estimator.predict(X_test)
+        scores.append(accuracy_score(y_test, y_pred))
+        scores_maj.append(score_majority_vote(y_test, y_pred, group_test))
 
-    y = np.concatenate(y)
-    y_pred = np.concatenate(y_pred)
-    groups = np.concatenate(groups)
+    return scores, scores_maj
 
-    y_maj = get_majority_vote(y_pred,groups)
-    unq_groups,unq_index = np.unique(groups,return_index=True)
-    y_unq = y[unq_index]
-    y_maj = y_maj[unq_index]
-    maj_accuracy = accuracy_score(y_unq,y_maj)
-    accuracy = accuracy_score(y,y_pred)
-    f_score = get_fscore(y, y_pred, return_precision_recall=False)
-    maj_f_score = get_fscore(y_unq, y_maj, return_precision_recall=False)
+def majority_vote_CV(
+        X, y, group, estimator, splitter, scale_function=None):
+    from tierpsytools.feature_processing.scaling_class import scalingClass
+    from sklearn.metrics import accuracy_score
+    ## Majority vote
+    #---------------
+    X = np.array(X)
+    y = np.array(y)
+    group = np.array(group)
 
-    return maj_accuracy,maj_f_score,y_maj,y_unq,accuracy,f_score,y_pred
+    scores = []
+    scores_maj = []
+    for train_index, test_index in splitter.split(X, y, group):
 
-def get_majority_vote(y_pred,groups,probas=None,labels=None):
+        # Normalize
+        scaler = scalingClass(scaling=scale_function)
+        X_train = scaler.fit_transform(X[train_index])
+        X_test = scaler.transform(X[test_index])
+
+        # Train classifier
+        estimator.fit(X_train, y[train_index])
+
+        # Predict
+        y_pred = estimator.predict(X_test)
+        scores.append(accuracy_score(y[test_index], y_pred))
+        scores_maj.append(
+            score_majority_vote(y[test_index], y_pred, group[test_index]))
+
+    return scores, scores_maj
+
+
+def _one_fit(X, y, group, train_index, test_index, estimator, scale_function=None):
+    from tierpsytools.feature_processing.scaling_class import scalingClass
+    from sklearn.metrics import accuracy_score
+
+    # Normalize
+    scaler = scalingClass(scaling=scale_function)
+    X_train = scaler.fit_transform(X[train_index])
+    X_test = scaler.transform(X[test_index])
+
+    # Train classifier
+    estimator.fit(X_train, y[train_index])
+
+    # Predict
+    y_pred = estimator.predict(X_test)
+    score = accuracy_score(y[test_index], y_pred)
+    score_maj = score_majority_vote(y[test_index], y_pred, group[test_index])
+    return score, score_maj
+
+def majority_vote_CV_parallel(
+        X, y, group, estimator, splitter, scale_function=None, n_jobs=-1):
+    from joblib import Parallel, delayed
+
+    ## Majority vote
+    #---------------
+    X = np.array(X)
+    y = np.array(y)
+    group = np.array(group)
+
+    parallel = Parallel(n_jobs=-1, verbose=True)
+    func = delayed(_one_fit)
+
+    scores = parallel(
+        func(X, y, group, train_index, test_index, estimator, scale_function=scale_function)
+        for train_index, test_index in splitter.split(X, y, group))
+
+    scores_maj = [maj for st, maj in scores]
+    scores = [st for st, maj in scores]
+
+    return scores, scores_maj
+
+def get_majority_vote(y_pred, group, probas=None, labels=None):
     """
     Estimate the classification accuracy when groups of data points are classified together based on a majority vote.
     param:
@@ -106,34 +165,49 @@ def get_majority_vote(y_pred,groups,probas=None,labels=None):
     """
     from collections import Counter
 
-    y_maj = np.empty_like(y_pred)
+    y_maj = {}
 
-    for grp in np.unique(groups):
+    for grp in np.unique(group):
 
-        c = Counter(y_pred[groups==grp])
+        c = Counter(y_pred[group==grp])
 
         #value,count = c.most_common()[0]
-        counts=np.array([c.most_common()[i][1] for i in range(len(c.most_common()))])
+        counts=np.array([votes for clss,votes in c.most_common()])
 
-        if len(counts[counts==counts[0]])==1:
+        if (sum(counts==counts[0])==1) or (probas is None):
             value,count = c.most_common()[0]
-            y_maj[groups==grp] = value
-        # if more than one labels have the same number of votes
-        else:   #len(c.most_common())>1 and c.most_common()[0][1]==c.most_common()[1][1]:
-            if probas is None:
-                value,count = c.most_common()[0]
-                y_maj[groups==grp] = value
-                print('Warning: the samples of compound {} are classified in more than one classes with the same frequency.'.format(grp))
-            else:
-                assert len(labels)==probas.shape[1]
-                values = np.array([c.most_common()[i][0] for i in range(len(c.most_common()))])
-                equal_classes = values[counts==counts[0]]
-                probas_of_equal_classes = []
-                for iclass in equal_classes:
-                    probas_of_equal_classes.append(np.mean(probas[groups==grp,labels==iclass]))
-                most_likely_class = equal_classes[np.argmax(probas_of_equal_classes)]
-                y_maj[groups==grp] = most_likely_class
+            y_maj[grp] = value
+
+        else:   # if more than one labels have the same number of votes and we have proba info
+            assert len(labels)==probas.shape[1]
+            values = np.array([clss for clss,votes in c.most_common()])
+            equal_classes = values[counts==counts[0]]
+            probas_of_equal_classes = []
+            for iclass in equal_classes:
+                probas_of_equal_classes.append(
+                    np.mean(probas[group==grp, labels==iclass]))
+            most_likely_class = equal_classes[np.argmax(probas_of_equal_classes)]
+            y_maj[grp] = most_likely_class
     return y_maj
+
+def score_majority_vote(y_real, y_pred, group, probas=None, labels=None):
+    from sklearn.metrics import accuracy_score
+
+    y_real = np.asarray(y_real)
+    y_pred = np.asarray(y_pred)
+    group = np.asarray(group)
+
+    ugroups = np.unique(group)
+
+    assert np.all([np.unique(y_real[group==g]).shape[0]==1 for g in ugroups]), \
+        'The real labels are not unique per group.'
+
+    y_group = [np.unique(y_real[group==g])[0] for g in ugroups]
+    y_maj = get_majority_vote(y_pred, group, probas=probas, labels=labels)
+    y_maj = [y_maj[key] for key in ugroups]
+
+    return accuracy_score(y_group, y_maj)
+
 
 def get_two_most_likely_majority_vote(y_pred,groups):
     """
