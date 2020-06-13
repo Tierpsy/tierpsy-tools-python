@@ -1,11 +1,9 @@
 pandas
 numpy
+scipy
 pathlib
 h5py
-time
-distutils
-warnings
 statsmodels
 matplotlib
-sklearn
+scikit-learn
 opencv=3.4.2
