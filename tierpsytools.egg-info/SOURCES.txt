@@ -3,6 +3,7 @@ README.md
 setup.py
 tierpsytools/__init__.py
 tierpsytools/helper.py
+tierpsytools.egg-info/.DS_Store
 tierpsytools.egg-info/PKG-INFO
 tierpsytools.egg-info/SOURCES.txt
 tierpsytools.egg-info/dependency_links.txt
