@@ -11,9 +11,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def k_significant_feat(feat, y_class, k=5, score_func='f_classif', scale=None,
-                       feat_names=None, figsize=None,
-                       title=None, savefig=None, close_after_plotting=False):
+def k_significant_feat(
+        feat, y_class, k=5, score_func='f_classif', scale=None,
+        feat_names=None, figsize=None,
+        title=None, xlabel=None, saveto=None, close_after_plotting=False,
+        plot=True, k_to_plot=None):
     """
     Finds the k most significant features in the feature matrix, based on
     how well they separate the data in groups defined in y_class. It uses
@@ -24,7 +26,7 @@ def k_significant_feat(feat, y_class, k=5, score_func='f_classif', scale=None,
             The feature matrix
         y_class: array-like, shape=(n_samples)
             Vector with the class of each samples
-        k: integer
+        k: integer or 'all'
             Number of fetures to select
         score_func: str or function, optional
             If string 'f_classif', 'chi2', 'mutual_info_classif' then the
@@ -47,12 +49,22 @@ def k_significant_feat(feat, y_class, k=5, score_func='f_classif', scale=None,
     return:
         support: array of booleans
             True for the selected features, False for the rest
+        plot: boolean
+            If True, the boxplots of the chosen features will be plotted
         plot
     """
     from sklearn.feature_selection import SelectKBest,chi2,f_classif,mutual_info_classif
 
+    if plot and k_to_plot is None:
+        k_to_plot = k
+
     if isinstance(feat,np.ndarray):
-        feat = pd.DataFrame(feat,columns=feat_names)
+        feat = pd.DataFrame(feat, columns=feat_names)
+    feat = feat.loc[:, feat.std()!=0]
+
+    if isinstance(k,str):
+        if k=='all':
+            k = feat.shape[1]
 
     # Find most significant features
     if isinstance(score_func, str):
@@ -84,17 +96,23 @@ def k_significant_feat(feat, y_class, k=5, score_func='f_classif', scale=None,
         pvalues = None
 
     # Plot a boxplot for each feature, showing its distribution in each class
-    for i,ft in enumerate(feat.columns[top_ft_ids]):
-        title = ft+'\n'+'score={:.3f}'.format(scores[i])
-        if pvalues is not None:
-            title += ', p-value={:.5f}'.format(pvalues[i])
-        plt.figure(figsize=figsize)
-        plt.title(title)
-        plt.boxplot([feat.loc[y_class==cl,ft] for cl in np.unique(y_class)])
-        if savefig:
-            plt.savefig(savefig)
-        if close_after_plotting:
-            plt.close()
+    if plot:
+        classes = np.unique(y_class)
+        for i,ft in enumerate(feat.columns[top_ft_ids[:k_to_plot]]):
+            title = ft+'\n'+'score={:.3f}'.format(scores[i])
+            if pvalues is not None:
+                title+=' - p-value = {}'.format(pvalues[i])
+            plt.figure(figsize=figsize)
+            plt.title(title)
+            plt.boxplot([feat.loc[y_class==cl,ft] for cl in classes])
+            plt.xticks(list(range(1,classes.shape[0]+1)), classes)
+            plt.ylabel(ft)
+            if xlabel is not None:
+                plt.xlabel(xlabel)
+            if saveto:
+                plt.savefig(saveto/ft)
+            if close_after_plotting:
+                plt.close()
 
     if pvalues is not None:
         return feat.columns[top_ft_ids].to_list(), (scores, pvalues), support
@@ -138,10 +156,52 @@ def top_feat_in_PCs(X, pc=0, scale=False, k='auto', feat_names=None):
 
     return k_feat, component[sortid[:k]]
 
+
+def top_feat_in_LDA(X, y, ldc=[0,1], scale=False, k='auto', feat_names=None):
+    """
+    Runs LDA and gives the top k contributing features for the specified
+    linear discriminant component (by default the first component).
+
+    """
+    import pandas as pd
+    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+
+    if isinstance(X,np.ndarray):
+        X = pd.DataFrame(X, columns=feat_names)
+
+    if scale:
+        Xscaled = X.loc[:,X.std()!=0].copy()
+        Xscaled = ( Xscaled - Xscaled.mean() ) / Xscaled.std()
+    else:
+        Xscaled = X
+
+    lda = LinearDiscriminantAnalysis(n_components=max(ldc)+1)
+    lda.fit(Xscaled, y)
+
+    ## pca.components_ --> each row contains the feature coefficients for one component
+    component = lda.scalings_[:, ldc]
+    if isinstance(ldc,int):
+        importance = np.abs(component)
+    else:
+        importance = np.linalg.norm(component, axis=1, ord=1)
+
+    sortid = np.flip(np.argsort(importance))
+
+    if k=='auto':
+        from kneed import KneeLocator
+        kn = KneeLocator(np.arange(sortid.shape[0]), importance[sortid], curve='convex', direction='decreasing')
+        k = kn.knee
+
+    k_feat = list(Xscaled.columns[sortid[:k]])
+
+    return k_feat, importance[sortid[:k]]
+
+
 def k_significant_from_classifier(
         feat, y_class, estimator, k=5, scale=None,
-        feat_names=None, figsize=None, title=None, savefig=None,
-        close_after_plotting=False):
+        feat_names=None, figsize=None, title=None, xlabel=None,
+        saveto=None,
+        close_after_plotting=False, plot=True, k_to_plot=None):
     """
     param:
         feat: array-like, shape=(n_samlples, n_features)
@@ -152,7 +212,7 @@ def k_significant_from_classifier(
             A supervised learning estimator with a fit method that provides
             information about feature importance either through a coef_
             attribute or through a feature_importances_ attribute.
-        k: integer, optional
+        k: integer or 'all', optional
             Number of fetures to select
             Default is 5.
         scale: None, str or function, optional
@@ -164,6 +224,8 @@ def k_significant_from_classifier(
         feat_names: list shape=(n_features)
             The names of the features, when feat is an array and not a dataframe
             (will be used for plotting)
+        plot: boolean
+            If True, the boxplots of the chosen features will be plotted
 
     return:
         top_feat: list, shape=(k,)
@@ -177,8 +239,15 @@ def k_significant_from_classifier(
     """
     from tierpsytools.feature_processing.scaling_class import scalingClass
 
+    if plot and k_to_plot is None:
+        k_to_plot = k
+
     if isinstance(feat,np.ndarray):
         feat = pd.DataFrame(feat,columns=feat_names)
+
+    if isinstance(k,str):
+        if k=='all':
+            k = feat.shape[1]
 
     if scale is not None:
         if isinstance(scale, str):
@@ -191,9 +260,9 @@ def k_significant_from_classifier(
 
     estimator.fit(feat_scaled, y_class)
     if hasattr(estimator, 'coef_'):
-        scores = np.mean(np.abs(estimator.coef_), axis=0)
+        scores = np.linalg.norm(estimator.coef_, axis=0, ord=1)
     elif hasattr(estimator, 'feture_importances_'):
-        scores = np.mean(np.abs(estimator.feture_importances_), axis=0)
+        scores = estimator.feture_importances_
     else:
         raise ValueError('The chosen estimator does not have a coef_ attribute'+
                          ' or a feature_importances_ attribute.')
@@ -204,16 +273,21 @@ def k_significant_from_classifier(
     scores = scores[top_ft_ids]
 
     # Plot a boxplot for each feature, showing its distribution in each class
-    # Plot a boxplot for each feature, showing its distribution in each class
-    for i,ft in enumerate(feat.columns[top_ft_ids]):
-        title = ft+'\n'+'score={:.3f}'.format(scores[i])
-        plt.figure(figsize=figsize)
-        plt.title(title)
-        plt.boxplot([feat.loc[y_class==cl,ft] for cl in np.unique(y_class)])
-        if savefig:
-            plt.savefig(savefig)
-        if close_after_plotting:
-            plt.close()
+    if plot:
+        classes = np.unique(y_class)
+        for i,ft in enumerate(feat.columns[top_ft_ids[:k_to_plot]]):
+            title = ft+'\n'+'score={:.3f}'.format(scores[i])
+            plt.figure(figsize=figsize)
+            plt.title(title)
+            plt.boxplot([feat.loc[y_class==cl,ft] for cl in classes])
+            plt.xticks(list(range(1,classes.shape[0]+1)), classes)
+            plt.ylabel(ft)
+            if xlabel is not None:
+                plt.xlabel(xlabel)
+            if saveto:
+                plt.savefig(saveto/ft)
+            if close_after_plotting:
+                plt.close()
 
     top_feat = feat.columns[top_ft_ids].to_list()
     return top_feat, scores, support
