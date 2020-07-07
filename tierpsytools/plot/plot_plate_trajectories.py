@@ -227,12 +227,14 @@ if __name__ == "__main__":
     example_featuresN = Path("/Volumes/behavgenom$/Saul/MicrobiomeScreen96WP/Results/20200222/microbiome_screen2_run7_p1_20200222_122858.22956805/metadata_featuresN.hdf5")
     
     parser = argparse.ArgumentParser()
+    # default to example file if none given
     parser.add_argument("--input", help="input file path (featuresN)", 
                         default=example_featuresN)
-    # default to example file if none given
-    parser.add_argument("--output", help="output directory path (for saving)", 
-                        default=example_featuresN.parent.parent) 
-    # default output directory if none given
+    # default to input's grandparent if non given
+    known_args = parser.parse_known_args()
+    parser.add_argument("--output", help="output directory path (for saving)",
+                        default=Path(known_args[0].input).parent.parent)
+
     # parser.add_argument("--downsample", help="downsample trajectory data by plotting the worm centroid for every 'nth' frame",
     #                     default=10)
     args = parser.parse_args()
