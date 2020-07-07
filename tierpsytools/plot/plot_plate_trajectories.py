@@ -141,14 +141,16 @@ def plot_plate_trajectories(featurefilepath, saveDir=None, downsample=10):
     # define multi-panel figure
     columns = 3
     rows = 2
-    x = 25.5
-    y = 16
+    h_in = 6
+    x_off_abs = (3600-3036) / 3036 * h_in
+    x = columns * h_in + x_off_abs
+    y = rows * h_in
     fig, axs = plt.subplots(rows,columns,figsize=[x,y])
-    
-    x_offset = 1.5 / x  # for bottom left image
-    width = 0.3137      # for all but top left image
-    width_tl = 0.3725   # for top left image
-    height = 0.5        # for all images
+
+    x_offset = x_off_abs / x  # for bottom left image
+    width = (1-x_offset) / columns  # for all but top left image
+    width_tl = width + x_offset   # for top left image
+    height = 1/rows        # for all images
     
     for channel, (maskedfilepath, featurefilepath) in file_dict.items():
         
