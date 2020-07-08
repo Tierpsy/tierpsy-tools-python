@@ -77,7 +77,9 @@ def majority_vote_CV(
 
 
 def majority_vote_CV_parallel(
-        X, y, group, estimator, splitter, scale_function=None, n_jobs=-1):
+        X, y, group, estimator, splitter,
+        scale_function=None, n_jobs=-1, sum_rule='counts'
+        ):
     from joblib import Parallel, delayed
     from tierpsytools.feature_processing.scaling_class import scalingClass
     from sklearn.metrics import accuracy_score
@@ -95,8 +97,18 @@ def majority_vote_CV_parallel(
 
         # Predict
         y_pred = estimator.predict(X_test)
+        if hasattr(estimator, 'predict_proba'):
+            probas = estimator.predict_proba(X_test)
+        elif hasattr(estimator, 'decision_function'):
+            probas = estimator.decision_function(X_test)
+        elif hasattr(estimator, 'oob_decision_function') and estimator.oob_score:
+            probas = estimator.oob_decision_function(X_test)
+        else:
+            probas = None
         score = accuracy_score(y[test_index], y_pred)
-        score_maj = score_majority_vote(y[test_index], group[test_index], y_pred=y_pred)
+        score_maj = score_majority_vote(
+            y[test_index], group[test_index], y_pred=y_pred,
+            probas=probas, labels=estimator.classes_, sum_rule=sum_rule)
         return score, score_maj
 
     X = np.array(X)
@@ -115,7 +127,8 @@ def majority_vote_CV_parallel(
 
     return scores, scores_maj
 
-def get_majority_vote(group, y_pred=None, probas=None, labels=None, sum_rule='counts'):
+def get_majority_vote(
+        group, y_pred=None, probas=None, labels=None, sum_rule='counts'):
     """
     Get the majority vote predictions per group.
     param:
@@ -170,7 +183,11 @@ def get_majority_vote(group, y_pred=None, probas=None, labels=None, sum_rule='co
 
     return y_maj
 
-def score_majority_vote(y_real, group, y_pred=None, probas=None, labels=None):
+def score_majority_vote(
+        y_real, group,
+        y_pred=None, probas=None, labels=None,
+        sum_rule='counts'
+        ):
     from sklearn.metrics import accuracy_score
 
     y_real = np.asarray(y_real)
@@ -180,10 +197,11 @@ def score_majority_vote(y_real, group, y_pred=None, probas=None, labels=None):
     ugroups = np.unique(group)
 
     assert np.all([np.unique(y_real[group==g]).shape[0]==1 for g in ugroups]), \
-        'The real labels are not unique per group.'
+        'The real class labels are not unique per group.'
 
     y_group = [np.unique(y_real[group==g])[0] for g in ugroups]
-    y_maj = get_majority_vote(group, y_pred=y_pred, probas=probas, labels=labels)
+    y_maj = get_majority_vote(
+        group, y_pred=y_pred, probas=probas, labels=labels, sum_rule=sum_rule)
     y_maj = [y_maj[key] for key in ugroups]
 
     return accuracy_score(y_group, y_maj)

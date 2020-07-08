@@ -22,10 +22,13 @@ class StratifiedGroupKFold(_BaseKFold):
     defined in groups, is assigned in one fold (all the points of the group
                                                 are assigned to the same fold)
     """
-    def __init__(self, n_splits=5):
+    def __init__(self, n_splits=5, random_seed=None):
         super().__init__(n_splits, shuffle=False, random_state=None)
+        self.seed = random_seed
 
     def split(self, X, y, groups, seed=None):
+        if seed is None:
+            seed = self.seed
         group_counts = pd.DataFrame(
             {'y':y, 'groups':groups}).groupby(by='y').agg({"groups": "nunique"})
         if np.any(group_counts.values<self.n_splits):
