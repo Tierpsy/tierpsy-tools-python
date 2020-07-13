@@ -8,11 +8,10 @@ Created on Thu Nov 21 12:25:41 2019
 import pandas as pd
 from pathlib import Path
 from tierpsytools.hydra.hydra_helper import exract_randomized_by
-from tierpsytools.hydra.hydra_helper import rename_out_meta_cols, explode_df
+from tierpsytools.hydra.hydra_helper import rename_out_meta_cols, explode_df, column_from_well, row_from_well
 import re
 import warnings
 import numpy as np
-import itertools
 
 #%%
 def merge_robot_metadata(
@@ -198,20 +197,22 @@ def merge_robot_metadata(
 #%%
 
 def populate_96WPs(worm_sorter,
-                   entire_rows=True,
+                   n_columns=12,
+                   n_rows=8,
                    saveto=None,
                    del_if_exists=False
                    ):
     """
     @author: ilbarlow   
 
+    Function to explode and make dataframes/csvs from wormsorter input files.
+    Works with plates that have been filled row-wise and column-wise
+    consecutively
+    
     Parameters
     ----------
-    worm_sorter : .csv file with headers 'start_row', 'end_row', 'start_column',
-    'end_column'
-        .
-    entire_rows : TYPE, optional
-        DESCRIPTION. The default is True.
+    worm_sorter : .csv file with headers 'start_well', 'end_well' and details
+    of strains in range of wells.
     saveto : None or path or default
         DESCRIPTION. The default is None.
     del_if_exists : Bool, optional
@@ -224,27 +225,27 @@ def populate_96WPs(worm_sorter,
 
     
     """
-    
-    # parameters for the 96WPs
-    n_columns = 12
-    column_names = np.arange(1, n_columns+1)
-    row_names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
-    well_names = list(itertools.product(row_names, column_names))
-    total_nwells = len(well_names)
-#    well_names = [i[0]+str(i[1]) for i in well_names]
-    
+    import string
+
     DATE = worm_sorter.stem.split('_')[0]
     wormsorter_log_fname = Path(worm_sorter).parent / '{}_wormsorter_errorlog.txt'.format(DATE)
     wormsorter_log_fname.touch()
 
+    # parameters for the plates
+    column_names = np.arange(1, n_columns+1)
+    row_names = list(string.ascii_uppercase[0:n_rows])
+    well_names = [i+str(b) for i in row_names for b in column_names]
+    total_nwells = len(well_names)
+
+    print('Total number of wells: {}'.format(total_nwells))
+    
     # checking if and where to save the file
     if saveto == None:
         print ('plate metadata file will not be saved')
     
     else:
         try:
-            Path(saveto).touch()
-            
+            Path(saveto).touch()           
         except FileNotFoundError:
             print ('saveto file invalid, saving to default filename')
             saveto = 'default'
@@ -252,75 +253,59 @@ def populate_96WPs(worm_sorter,
         if saveto == 'default':
             saveto = Path(worm_sorter).parent / ('{}_plate_metadata.csv'.format(DATE))
             print ('saving to {}'.format(saveto))
-
     if (saveto is not None) and (saveto.exists()):
         if del_if_exists:
-            warnings.warn('Plate metadata file {} already '.format(saveto)
-                          + 'exists.File will be overwritten.')
+            warnings.warn('\nPlate metadata file {} already '.format(saveto)
+                          + 'exists. File will be overwritten.')
             saveto.unlink()
         else:
-            warnings.warn('Plate metadata file {} already '.format(saveto)
+            warnings.warn('\nPlate metadata file {} already '.format(saveto)
                           + 'exists. Nothing to do here. If you want to '
-                          + 'recompile the day metadata, rename or delete the '
+                          + 'recompile the wormsorter metadata, rename or delete the '
                           + 'exisiting file.')
             return None
-
+    
     # import worm_sorter metadata and find the start and end rows and columns
     worm_sorter_df = pd.read_csv(worm_sorter)
-    worm_sorter_df['start_row'] = [re.findall(r"[A-Z]", r.start_well)[0]
-                                   for i, r in worm_sorter_df.iterrows()
-                                   ]
-    worm_sorter_df['end_row'] = [re.findall(r"[A-Z]", r.end_well)[0]
-                                 for i, r in worm_sorter_df.iterrows()
-                                 ]
-    worm_sorter_df['start_column'] = [re.findall(r"(\d{1,2})", r.start_well)[0]
-                                      for i, r in worm_sorter_df.iterrows()
-                                      ]
-    worm_sorter_df['end_column'] = [re.findall(r"(\d{1,2})", r.end_well)[0]
-                                    for i, r in worm_sorter_df.iterrows()
-                                    ]
-    # create 96WP template to fill up
-    plate_template = pd.DataFrame()
-    plate_template['imaging_plate_row'] = [i[0] for i in well_names]
-    plate_template['imaging_plate_column'] = [i[1] for i in well_names]
-    plate_template['well_name'] = [i[0] + str(i[1]) for i in well_names]
-
-    if not entire_rows:
-        print('cannot use this function for generating the metadata;' +
-              ' fills entire rows only.')
-        return None
-
-    # populate the dataframe
-    plate_metadata = []
-    for i, r in worm_sorter_df.iterrows():
-        _section = (
-                plate_template[
-                        (r.start_row <= plate_template.imaging_plate_row)
-                        & (plate_template.imaging_plate_row <= r.end_row)
-                        ]).reset_index(drop=True)
-        _details = pd.concat(
-                _section.shape[0]*[r.to_frame().transpose()]
-                ).reset_index(drop=True)
-        plate_metadata.append(
-                pd.concat([_section, _details], axis=1, sort=True))
-
-    plate_metadata = pd.concat(plate_metadata)
+    worm_sorter_df['start_row'] = row_from_well(worm_sorter_df.start_well)
+    worm_sorter_df['end_row'] = row_from_well(worm_sorter_df.end_well)
+    worm_sorter_df['row_range'] = [[chr(c) for c in np.arange(ord(r.start_row),
+                                                              ord(r.end_row)+1)] 
+                                   for i, r in worm_sorter_df.iterrows()]   
+    worm_sorter_df['start_column'] = column_from_well(worm_sorter_df.start_well)
+    worm_sorter_df['end_column'] = column_from_well(worm_sorter_df.end_well)
+    worm_sorter_df['column_range'] = [list(np.arange(r.start_column,
+                                                 r.end_column+1))
+                                      for i, r in worm_sorter_df.iterrows()]
+    
+    worm_sorter_df['well_name'] = [[i+str(b) for i in r.row_range
+                                    for b in r.column_range]
+                                for i, r in worm_sorter_df.iterrows()]
+    
+    plate_metadata = explode_df(worm_sorter_df, 'well_name')
     
     # do check to make sure there aren't multiple  plates
     plate_errors =  []
-    unique_plates = plate_metadata['imaging_plate_id'].unique()
-    
+    unique_plates = plate_metadata['imaging_plate_id'].unique()    
     for plate in unique_plates:
         if plate_metadata[plate_metadata['imaging_plate_id'] == plate].shape[0] > total_nwells:
             warnings.warn('{}: more than {} wells'.format(plate, total_nwells))            
             plate_errors.append(plate)
             with open(wormsorter_log_fname, 'a') as fid:
-                fid.write(plate + '\n')
-    
+                fid.write(plate + '\n')  
     if len(plate_errors) == 0:
         with open(wormsorter_log_fname, 'a') as fid:
             fid.write ('No wormsorter plate errors \n')
-            
+    
+    cols_to_keep = ['hydra_number', 'imaging_plate_id', 'imaging_run',
+                    'well_name', 'worm_strain', 'worm_code', 'worm_gene',
+                    'bacteria_strain', 'start_well','end_well',
+                    'cave_humidity_percent', 'cave_temp_oC', 'cave_time',
+                    'comments', 'date_bleached_yyyymmdd', 'days_in_diapause',
+                    'media_type', 'date_plates_poured_yyyymmdd', 
+                    'date_refed_yyyymmdd','number_worms_per_well',
+                    'recording_time']
+    plate_metadata = plate_metadata.reindex(columns=cols_to_keep)
     plate_metadata.to_csv(saveto, index=False)
 
     return plate_metadata
