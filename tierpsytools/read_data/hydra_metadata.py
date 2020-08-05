@@ -8,6 +8,7 @@ Created on Tue Apr  7 15:52:14 2020
 
 import pandas as pd
 from pathlib import Path
+from warnings import warn
 import pdb
 
 def add_bluelight_label(
@@ -42,7 +43,7 @@ def _imgstore_name_from_filename(filename, path_levels=[-3,-1]):
 
 def read_hydra_metadata(
         feat, fname, meta,
-        feat_id_cols = ['file_id', 'well_name', 'is_good_well'],
+        feat_id_cols = ['file_id', 'n_skeletons', 'well_name', 'is_good_well'],
         add_bluelight=True,
         bluelight_labels=['prestim', 'bluelight', 'poststim']):
     """
@@ -110,6 +111,19 @@ def read_hydra_metadata(
             newmeta, labels=bluelight_labels)
 
     assert newmeta.shape[0] == feat.shape[0]
+
+    _cols = feat_id_cols+['imgstore_name', 'featuresN_filename']
+    if add_bluelight:
+        _cols += ['bluelight']
+    all_nans = newmeta[newmeta.columns.difference(_cols)].isna().all(axis=1)
+    if  all_nans.sum() > 1:
+        warn(
+            'There are wells in the feature summaries that do not have '+
+            'matching metadata information. These wells will be discarded.')
+        newmeta = newmeta[~all_nans]
+        feat = feat[~all_nans]
+        newmeta = newmeta.reset_index(drop=True)
+        feat = feat.reset_index(drop=True)
 
     return feat[feat.columns.difference(feat_id_cols)], newmeta
 
@@ -219,3 +233,90 @@ def align_bluelight_conditions(
     else:
         return feat, meta
 
+def _read_hydra_metadata(
+        feat, fname, meta,
+        feat_id_cols = ['file_id', 'well_name', 'is_good_well'],
+        add_bluelight=True,
+        bluelight_labels=['prestim', 'bluelight', 'poststim']):
+    """
+    Creates matching features and metadata dfs from the .csv files of a hydra
+    screening (assuming the standardized format of tierpsy and hydra metadata
+    from tierpsytools).
+
+    Parameters
+    ----------
+    feat : dataframe size =
+           (n_wells_with_features*n_bluelight_conditions,
+           n_features + len(feat_id_cols))
+        The tierpsy features_summaries read into a dataframe.
+        Must have a file_id and well_id column.
+    fname : dataframe size = (n_files, n_cols)
+        The tierpsy filenames_summaries read into a dataframe. Must have a
+        file_id and filename column.
+    meta : dataframe size = (n_wells_screened*n_bluelight_conditions, n_meta_cols)
+        The experiment full metadata read into a dataframe.
+    feat_id_cols : list of strings, optional
+        The columns in the feat dataframe that are not features.
+        The default is ['file_id', 'well_name', 'is_good_well'].
+    add_bluelight : bool, optional
+        Add a metadata column that specifies the bluelight condition for each row.
+        The default is True.
+    bluelight_label_location_in_imgstore_stem : int, optional
+        Where to file the bluelight specification in the imgstore name.
+        The default is 3.
+
+    Returns
+    -------
+    feat: dataframe shape = (n_wells_with_features*n_bluelight_conditions, n_features)
+        Features dataframe containing only feature columns..
+    newmeta : dataframe shape = (n_wells_with_features*n_bluelight_conditions, n_meta_cols)
+        Metadata dataframe matching the returned feat dataframe row-by-row.
+
+    """
+    if 'filename' in fname:
+        filename = 'filename'
+    elif 'file_name' in fname:
+        filename = 'file_name'
+    else:
+        raise ValueError('The filenames dataframe needs to have a filename column.')
+
+    fname['imgstore_name'] = fname[filename].apply(
+        lambda x: _imgstore_name_from_filename(x,path_levels=[-3,-1]))
+
+    ## Add the filename summary info to the metadata
+    meta.insert(
+        0, 'file_id', meta['imgstore_name'].map(
+            dict(fname[['imgstore_name', 'file_id']].values))
+        )
+
+    meta = meta[~meta['file_id'].isna()]
+
+    meta.insert(
+        0, 'featuresN_filename', meta['file_id'].map(
+            dict(fname[['file_id', filename]].values))
+        )
+
+    # Add the file_id_cols info to the metadata and keep only the metadata for
+    # the wells that have features
+    meta = pd.merge(
+        meta.reset_index(), feat[feat_id_cols].reset_index(),
+        on=['file_id', 'well_name'], how='inner', suffixes=('_meta','_feat')
+        )
+
+    # Sort the feat dataframe to match the metadata dataframe row-by-row and
+    # reset the index in both
+    feat = feat.loc[meta['feat_index'].values, :]
+    assert all(feat['file_id'].values==meta['file_id'].values)
+    assert all(feat['well_name'].values==meta['well_name'].values)
+
+    meta.reset_index(drop=True, inplace=True)
+    feat.reset_index(drop=True, inplace=True)
+
+    # Add bluelight label
+    if add_bluelight:
+        meta = add_bluelight_label(
+            meta, labels=bluelight_labels)
+
+    assert meta.shape[0] == feat.shape[0]
+
+    return feat[feat.columns.difference(feat_id_cols)], meta

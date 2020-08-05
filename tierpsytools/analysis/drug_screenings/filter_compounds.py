@@ -63,11 +63,10 @@ def remove_MOAs_based_on_drug_count(
     else:
         return feat, meta
 
-def remove_drugs_with_low_effect_univariate(
-        feat, meta,
-        threshold=0.05, fdr=0.05, test_each_dose=False,
-        keep_names=['DMSO', 'NoCompound'],
-        drugname_column = 'drug_type', drugdose_column = 'drug_dose'
+def compounds_with_low_effect_univariate(
+        feat, drug_name, drug_dose,
+        fdr=0.05, test_type='muticlass',
+        keep_names=['DMSO', 'NoCompound']
         ):
     """
     Remove drugs when the number of features significantly different to DMSO
@@ -77,53 +76,44 @@ def remove_drugs_with_low_effect_univariate(
     The Benjamini-Hochberg method is used to control the false discovery rate.
     param:
         feat : dataframe
-            feature dataframe
-        meta : dtaframe
-            dataframe with metadata contraining a drugname_column and a
-            drugdose_column
-        threshold : float < 1.0 and < 0.0
-            percentage of significant features detected to consider that the
-            compound has significant effect
+            feature dataframe, shape=(n_samples, n_features)
+        drug_name : array, shape=(n_samples)
+            defines the type of drug in each sample
+        drug_dose : array, shape=(n_samples)
+            defines the drug dose in each sample (expects 0 dose for controls)
         fdr : float < 1.0 and > 0.0
             false discovery rate parameter in Benjamini-Hochberg method
-        test_each_dose : bool, optional
-            If true, each dose of each drug is tested for statistical
-            significance compared to DMSO, and the drug is considered to
-            have a significant effect if any of the doses satisfies the
-            conditions set by the fdr and threshold parameters.
-            If False, an ANOVA test is performed comparing the DMSO with all
-            the doses (as separate classes) and the conditions are checked once
-            for each drug.
+        test_type : str, options: ['binary', 'multiclass', 'binary_each_dose']
+            defines the groups seen in the statistical test.
+            If 'binary', then the controls are compared to all the drug samples
+            pooled together.
+            If 'multiclass', then the controls and each drug dose are all
+            considered separate groups.
+            If 'binary_each_dose', then n_doses tests are performed for each
+            feture. Each test compares one dose to the controls. If any of the
+            tests reaches the significance thresshold, then the feature
+            is considered significant.
         keep_names : list or None, optional
             list of names from the drugname_column to keep without checking
             for significance
         return_nonsignificant : bool, optional
             return the names of the drugs that are removed from the
             dataset
-        drugname_column : string
-            the name of the column in meta that contains the individual
-            compound names
-        drugdose_column : string
-            the name of the column in meta that contains the drug doses
     return:
         signif_effect_drugs : list
         low_effect_drugs : list
         significant : dictionary
             mask of significant features for each drug name
     """
-    from sklearn.feature_selection import SelectFdr, f_classif
+    from sklearn.feature_selection import f_classif
     import pdb
     from statsmodels.stats.multitest import multipletests
-
-    if meta[drugname_column].isna().any():
-        raise ValueError('Drug names contain nan values.')
 
     if keep_names is None:
         keep_names = []
 
     #n_feat = feat.shape[1]
-    drug_names = meta.loc[
-        ~meta[drugname_column].isin(keep_names), drugname_column].unique()
+    drug_names = np.array([drug for drug in np.unique(drug_name) if drug not in keep_names])
 
     pvals = []
     for idrug,drug in enumerate(drug_names):
@@ -131,39 +121,47 @@ def remove_drugs_with_low_effect_univariate(
 
         # For each dose get significant features using Benjamini-Hochberg
         # method with FDR=fdr
-        X = feat[meta[drugname_column].isin([drug,'DMSO'])]
-        y = meta.loc[meta[drugname_column].isin([drug,'DMSO']), drugdose_column]
+        X = feat[np.isin(drug_name, [drug,'DMSO'])]
+        y = drug_dose[np.isin(drug_name, [drug,'DMSO'])]
 
-        selector = SelectFdr(score_func=f_classif, alpha=fdr)
-
-        if not test_each_dose:
+        if test_type=='multiclass':
             try:
-                selector.fit(X, y)
+                _, c_pvals = f_classif(X, y)
             except ValueError:
                 pdb.set_trace()
 
-            pvals.append(np.asarray(selector.pvalues_))
+            pvals.append(c_pvals)
 
-        else:
-            _pvals=[]
-            for idose, dose in enumerate(y.unique()):
+        elif test_type=='binary_each_dose':
+            c_pvals=[]
+            for idose, dose in enumerate(np.unique(y)):
                 if dose == 0:
                     continue
-                selector.fit(X[np.isin(y,[0,dose])], y[np.isin(y,[0,dose])])
+                _fscores, _pvals = f_classif(X[np.isin(y,[0,dose])], y[np.isin(y,[0,dose])])
 
-                _pvals.append(np.asarray(selector.pvalues_))
+                pdb.set_trace()
+                c_pvals.append(_pvals)
 
-            pvals.append(_pvals)
+            pvals.append(c_pvals)
+
+        elif test_type=='binary':
+            y[y>0] = 1
+            try:
+                _, c_pvals = f_classif(X, y)
+            except ValueError:
+                pdb.set_trace()
+            pvals.append(c_pvals)
 
     try:
         significant,_,_,_ = multipletests(
             np.vstack(pvals).reshape(-1), alpha=fdr, method='fdr_bh',
             is_sorted=False, returnsorted=False
             )
+        assert all(~np.isnan(significant))
     except:
         pdb.set_trace()
 
-    if not test_each_dose:
+    if test_type=='binary' or test_type=='multiclass':
         significant = significant.reshape(np.array(pvals).shape)
         signif_effect_drugs = np.any(significant, axis=1)
     else:
@@ -180,10 +178,8 @@ def remove_drugs_with_low_effect_univariate(
     return signif_effect_drugs, low_effect_drugs, significant
 
 def remove_drugs_with_low_effect_multivariate(
-        feat, meta, signif_level=0.05,
+        feat, drug_name, drug_dose, signif_level=0.05,
         cov_estimator = 'EmpiricalCov',
-        drugname_column = 'drug_type',
-        dose_column = 'drug_dose',
         keep_names = ['DMSO', 'NoCompound']
         ):
     """
@@ -214,19 +210,16 @@ def remove_drugs_with_low_effect_multivariate(
     from scipy.stats import chi2
     from time import time
 
-    if meta[drugname_column].isna().any():
-        raise ValueError('Drug names contain nan values.')
-
     if cov_estimator == 'RobustCov':
         estimator = MinCovDet()
     elif cov_estimator == 'EmpiricalCov':
         estimator = EmpiricalCovariance()
 
     print('Estimating covariance matrix...'); st_time=time()
-    estimator.fit(feat[meta[drugname_column].isin(['DMSO'])])
+    estimator.fit(feat[drug_name=='DMSO'])
     print('Done in {:.2f}.'.format(time()-st_time))
 
-    drug_names = meta[drugname_column].unique()
+    drug_names = np.unique(drug_name)
 
     mah_dist = {}
     signif_effect_drugs = []
@@ -237,9 +230,8 @@ def remove_drugs_with_low_effect_multivariate(
         print('Checking compound {} ({}/{})...'.format(
             drug, idr+1, drug_names.shape[0]))
 
-        X = feat[meta[drugname_column].isin([drug])]
-        X.insert(0, 'dose',
-                 meta.loc[meta[drugname_column].isin([drug]), dose_column])
+        X = feat[drug_name==drug]
+        X.insert(0, 'dose', drug_dose[drug_name==drug])
 
         X = X.groupby(by='dose').mean()
 

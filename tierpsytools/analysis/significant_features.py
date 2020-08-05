@@ -11,11 +11,35 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+def plot_feature_boxplots(
+        feat_to_plot, y_class, scores, pvalues=None,
+        figsize=None, saveto=None, xlabel=None,
+        close_after_plotting=False
+        ):
+
+    classes = np.unique(y_class)
+    for i,ft in enumerate(feat_to_plot):
+        title = ft+'\n'+'score={:.3f}'.format(scores[i])
+        if pvalues is not None:
+            title+=' - p-value = {}'.format(pvalues[i])
+        plt.figure(figsize=figsize)
+        plt.title(title)
+        plt.boxplot([feat.loc[y_class==cl,ft] for cl in classes])
+        plt.xticks(list(range(1,classes.shape[0]+1)), classes)
+        plt.ylabel(ft)
+        if xlabel is not None:
+            plt.xlabel(xlabel)
+        if saveto:
+            plt.savefig(saveto/ft)
+        if close_after_plotting:
+            plt.close()
+    return
+
 def k_significant_feat(
         feat, y_class, k=5, score_func='f_classif', scale=None,
-        feat_names=None, figsize=None,
-        title=None, xlabel=None, saveto=None, close_after_plotting=False,
-        plot=True, k_to_plot=None):
+        feat_names=None, plot=True, k_to_plot=None, close_after_plotting=False,
+        saveto=None, figsize=None, title=None, xlabel=None
+        ):
     """
     Finds the k most significant features in the feature matrix, based on
     how well they separate the data in groups defined in y_class. It uses
@@ -53,7 +77,8 @@ def k_significant_feat(
             If True, the boxplots of the chosen features will be plotted
         plot
     """
-    from sklearn.feature_selection import SelectKBest,chi2,f_classif,mutual_info_classif
+    from sklearn.feature_selection import \
+        SelectKBest, chi2,f_classif, mutual_info_classif
 
     if plot and k_to_plot is None:
         k_to_plot = k
@@ -97,22 +122,10 @@ def k_significant_feat(
 
     # Plot a boxplot for each feature, showing its distribution in each class
     if plot:
-        classes = np.unique(y_class)
-        for i,ft in enumerate(feat.columns[top_ft_ids[:k_to_plot]]):
-            title = ft+'\n'+'score={:.3f}'.format(scores[i])
-            if pvalues is not None:
-                title+=' - p-value = {}'.format(pvalues[i])
-            plt.figure(figsize=figsize)
-            plt.title(title)
-            plt.boxplot([feat.loc[y_class==cl,ft] for cl in classes])
-            plt.xticks(list(range(1,classes.shape[0]+1)), classes)
-            plt.ylabel(ft)
-            if xlabel is not None:
-                plt.xlabel(xlabel)
-            if saveto:
-                plt.savefig(saveto/ft)
-            if close_after_plotting:
-                plt.close()
+        plot_feature_boxplots(
+            feat.iloc[:, top_ft_ids[:k_to_plot]], y_class, scores,
+            pvalues=pvalues, figsize=figsize, saveto=saveto, xlabel=xlabel,
+            close_after_plotting=close_after_plotting)
 
     if pvalues is not None:
         return feat.columns[top_ft_ids].to_list(), (scores, pvalues), support
@@ -157,7 +170,11 @@ def top_feat_in_PCs(X, pc=0, scale=False, k='auto', feat_names=None):
     return k_feat, component[sortid[:k]]
 
 
-def top_feat_in_LDA(X, y, ldc=[0,1], scale=False, k='auto', feat_names=None):
+def top_feat_in_LDA(
+        X, y, ldc=[0,1],
+        scale=False, k='auto',
+        feat_names=None, estimator=None
+        ):
     """
     Runs LDA and gives the top k contributing features for the specified
     linear discriminant component (by default the first component).
@@ -175,11 +192,13 @@ def top_feat_in_LDA(X, y, ldc=[0,1], scale=False, k='auto', feat_names=None):
     else:
         Xscaled = X
 
-    lda = LinearDiscriminantAnalysis(n_components=max(ldc)+1)
-    lda.fit(Xscaled, y)
+    if estimator is None:
+        estimator = LinearDiscriminantAnalysis(n_components=max(ldc)+1)
+
+    estimator.fit(Xscaled, y)
 
     ## pca.components_ --> each row contains the feature coefficients for one component
-    component = lda.scalings_[:, ldc]
+    component = estimator.scalings_[:, ldc]
     if isinstance(ldc,int):
         importance = np.abs(component)
     else:
@@ -199,9 +218,9 @@ def top_feat_in_LDA(X, y, ldc=[0,1], scale=False, k='auto', feat_names=None):
 
 def k_significant_from_classifier(
         feat, y_class, estimator, k=5, scale=None,
-        feat_names=None, figsize=None, title=None, xlabel=None,
-        saveto=None,
-        close_after_plotting=False, plot=True, k_to_plot=None):
+        feat_names=None, k_to_plot=None, close_after_plotting=False,
+        saveto=None, figsize=None, title=None, xlabel=None
+        ):
     """
     param:
         feat: array-like, shape=(n_samlples, n_features)
@@ -274,20 +293,10 @@ def k_significant_from_classifier(
 
     # Plot a boxplot for each feature, showing its distribution in each class
     if plot:
-        classes = np.unique(y_class)
-        for i,ft in enumerate(feat.columns[top_ft_ids[:k_to_plot]]):
-            title = ft+'\n'+'score={:.3f}'.format(scores[i])
-            plt.figure(figsize=figsize)
-            plt.title(title)
-            plt.boxplot([feat.loc[y_class==cl,ft] for cl in classes])
-            plt.xticks(list(range(1,classes.shape[0]+1)), classes)
-            plt.ylabel(ft)
-            if xlabel is not None:
-                plt.xlabel(xlabel)
-            if saveto:
-                plt.savefig(saveto/ft)
-            if close_after_plotting:
-                plt.close()
+        plot_feature_boxplots(
+            feat.iloc[:, top_ft_ids[:k_to_plot]], y_class, scores,
+            figsize=figsize, saveto=saveto, xlabel=xlabel,
+            close_after_plotting=close_after_plotting)
 
     top_feat = feat.columns[top_ft_ids].to_list()
     return top_feat, scores, support
