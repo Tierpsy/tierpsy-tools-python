@@ -13,25 +13,31 @@ Created on Thu Apr 23 19:33:54 2020
 """
 import numpy as np
 from tierpsytools.feature_processing.scaling_class import scalingClass
-from tierpsytools.analysis.helper import _check_if_classifscorer
+from tierpsytools.analysis.helper import _get_multi_sclassifscorers
 from joblib import Parallel, delayed
+import pdb
 
-def cv_predict_parallel(
+def cv_predict(
         X, y,
         splitter, estimator,
         group=None, scale_function=None,
-        n_jobs=-1
+        n_jobs=-1, sample_weight=None
         ):
 
+    if n_jobs==1:
+        return cv_predict_single(X, y, splitter, estimator, group=group,
+                                 scale_function=scale_function,
+                                 sample_weight=None)
+
     def _one_fit(X, y, group, train_index, test_index, estimator,
-                 scale_function=None):
+                 sample_weight, scale_function=None):
         # Normalize
         scaler = scalingClass(scaling=scale_function)
         X_train = scaler.fit_transform(X[train_index])
         X_test = scaler.transform(X[test_index])
 
         # Train classifier
-        estimator.fit(X_train, y[train_index])
+        estimator.fit(X_train, y[train_index], sample_weight=sample_weight[train_index])
 
         # Predict
         y_pred = estimator.predict(X_test)
@@ -51,15 +57,24 @@ def cv_predict_parallel(
     y = np.array(y)
     labels = np.unique(y)
 
+    if sample_weight is None:
+        sample_weight = np.ones(y.shape)
+    else:
+        sample_weight = np.array(sample_weight)
+
     pred = np.empty_like(y)
     probas = np.empty((X.shape[0], labels.shape[0]))
 
     parallel = Parallel(n_jobs=-1, verbose=True)
     func = delayed(_one_fit)
 
-    res = parallel(
-        func(X, y, group, train_index, test_index, estimator, scale_function=scale_function)
-        for train_index, test_index in splitter.split(X, y, group))
+    try:
+        res = parallel(
+            func(X, y, group, train_index, test_index, estimator,
+                 sample_weight, scale_function=scale_function)
+            for train_index, test_index in splitter.split(X, y, group))
+    except:
+        pdb.set_trace()
 
     for  test_index,y_pred,y_probas,_ in res:
         pred[test_index] = y_pred
@@ -70,16 +85,21 @@ def cv_predict_parallel(
 
     return pred, probas, labels, test_folds, trained_estimators
 
-def cv_predict(
+def cv_predict_single(
         X, y,
         splitter, estimator,
         group=None, scale_function=None,
-        n_jobs=-1
+        sample_weight=None
         ):
 
     labels = np.unique(y)
     X = np.array(X)
     y = np.array(y)
+
+    if sample_weight is None:
+        sample_weight = np.ones(y.shape)
+    else:
+        sample_weight = np.array(sample_weight)
 
     pred = np.empty_like(y)
     probas = np.empty((X.shape[0], labels.shape[0]))
@@ -96,7 +116,7 @@ def cv_predict(
         X_test = scaler.transform(X[test_index])
 
         # Train classifier
-        estimator.fit(X_train, y[train_index])
+        estimator.fit(X_train, y[train_index], sample_weight[train_index])
         trained_estimators.append(estimator)
 
         # Predict
@@ -121,9 +141,10 @@ def cv_score(
         splitter, estimator,
         group=None, sample_weight=None,
         scale_function=None,
-        n_jobs=-1, scorer=None):
+        n_jobs=-1, scorer=None,
+        return_predictions=False):
 
-    scorer = _check_if_classifscorer(scorer)
+    scorers = _get_multi_sclassifscorers(scorer)
 
     if n_jobs==1:
         pred, probas, labels, test_folds, _ = \
@@ -131,21 +152,26 @@ def cv_score(
                        scale_function=scale_function)
     else:
         pred, probas, labels, test_folds, _ = \
-            cv_predict_parallel(X, y, splitter, estimator, group=group,
-                                scale_function=scale_function, n_jobs=n_jobs)
+            cv_predict(X, y, splitter, estimator, group=group,
+                       scale_function=scale_function, n_jobs=n_jobs,
+                       sample_weight=sample_weight)
 
-    scores = []
+    scores = {key:[] for key in scorers.keys()}
     for test_index in test_folds:
         if probas is not None:
             _probas = probas[test_index]
         else:
             _probas = None
-        scores.append(scorer.score(
-            y[test_index], pred=pred[test_index], probas=_probas,
-            labels=labels, sample_weight=None)
-            )
+        for key in scorers.keys():
+            scores[key].append(scorers[key].score(
+                y[test_index], pred=pred[test_index], probas=_probas,
+                labels=labels, sample_weight=sample_weight)
+                )
 
-    return scores
+    if return_predictions:
+        return scores, pred, probas, labels
+    else:
+        return scores
 
 
 def get_fscore(
@@ -208,6 +234,8 @@ def plot_confusion_matrix(
     # Only use the labels that appear in the data
     if classes is not None:
         classes = [classes[key] for key in unique_labels(y_true, y_pred)]
+    else:
+        classes = unique_labels(y_true, y_pred)
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
         print("Normalized confusion matrix")
