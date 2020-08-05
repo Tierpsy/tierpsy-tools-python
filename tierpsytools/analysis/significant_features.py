@@ -32,7 +32,7 @@ def plot_feature_boxplots(
         if saveto:
             plt.savefig(saveto/ft)
         if close_after_plotting:
-            plt.close())
+            plt.close()
     return
 
 def k_significant_feat(
