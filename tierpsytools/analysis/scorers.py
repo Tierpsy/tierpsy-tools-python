@@ -11,10 +11,11 @@ from tierpsytools.analysis.drug_screenings.MIL.majority_vote import \
 from tierpsytools.analysis.helper import _get_pred_from_probas
 import pandas as pd
 import warnings
+import pdb
 
 
 class ClassifScorer():
-    def __init__(self, scorer=None, require_proba=False,
+    def __init__(self, scorer=None, name=None, require_proba=False,
                  accept_weights=False, **kwargs):
 
         if scorer is None:
@@ -23,8 +24,10 @@ class ClassifScorer():
         if isinstance(scorer,str):
             self.scorer, self.require_proba, self.accept_weights = \
                 _make_scorer(scorer, **kwargs)
+            self.name = scorer
         else:
             self.scorer = scorer
+            self.name = name
             self.require_proba = require_proba
             self.accept_weights = accept_weights
 
@@ -54,7 +57,7 @@ class ClassifScorer():
             raise ValueError('Scorer requires proba predictions.')
         if not self.accept_weights:
             if sample_weight is not None:
-                raise ValueError('Scorer does not accept sample weights.')
+                warnings.warn('Scorer does not accept sample weights. Weights will be ignored.')
 
         if argv:
             vote_type = argv[0]
@@ -89,7 +92,7 @@ class ClassifScorer():
         y_true = _get_y_group(true, group)
         if sample_weight is not None:
             y_weight = pd.DataFrame(sample_weight).groupby(by=group).mean()
-            y_weight = y_weight.loc[y_true.index, :].values
+            y_weight = y_weight.loc[y_true.index, :].values.reshape(-1)
         else:
             y_weight=None
         if self.require_proba:
@@ -119,8 +122,8 @@ def _make_scorer(scorer, **kwargs):
         balanced_accuracy = {'scoring': balanced_accuracy_score, 'probas':False, 'weights':True},
         f1 = {'scoring': f1_score, 'probas':False, 'weights':True},
         f1_score = {'scoring': f1_score, 'probas':False, 'weights':True},
-        roc_auc = {'scoring': roc_auc_score, 'probas':True, 'weights':True},
-        roc_auc_score = {'scoring': roc_auc_score, 'probas':True, 'weights':True},
+        roc_auc = {'scoring': roc_auc_score, 'probas':True, 'weights':False},
+        roc_auc_score = {'scoring': roc_auc_score, 'probas':True, 'weights':False},
         jaccard = {'scoring': jaccard_score, 'probas':False, 'weights':True},
         jaccard_score = {'scoring': jaccard_score, 'probas':False, 'weights':True},
         log_loss = {'scoring': log_loss, 'probas':True, 'weights':True},
