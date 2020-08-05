@@ -7,15 +7,14 @@ Created on Fri May  8 18:01:33 2020
 """
 import numpy as np
 import pandas as pd
-from tierpsytools.analysis.classification_tools import \
-    cv_predict_parallel, cv_predict
+from tierpsytools.analysis.classification_tools import cv_predict
 from tierpsytools.feature_processing.scaling_class import scalingClass
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import normalize
 from joblib import Parallel, delayed
 from collections import Counter
 from sklearn.preprocessing import LabelEncoder
-from tierpsytools.analysis.helper import _check_if_classifscorer
+from tierpsytools.analysis.helper import _get_multi_sclassifscorers
 import pdb
 
 def _get_y_group(y, group):
@@ -151,19 +150,14 @@ def majority_vote_CV(
         return_predictions=False, scorer=None
         ):
 
-    scorer = _check_if_classifscorer(scorer)
+    scorers = _get_multi_sclassifscorers(scorer)
 
-    if n_jobs == 1:
-        pred, probas, labels, test_folds, trained_estimators = cv_predict(
-            X, y, splitter, estimator, group=group, scale_function=scale_function,
-            n_jobs=n_jobs)
-    else:
-        pred, probas, labels, test_folds, trained_estimators = cv_predict_parallel(
-            X, y, splitter, estimator, group=group, scale_function=scale_function,
-            n_jobs=n_jobs)
+    pred, probas, labels, test_folds, trained_estimators = cv_predict(
+        X, y, splitter, estimator, group=group, scale_function=scale_function,
+        n_jobs=n_jobs)
 
-    scores = []
-    scores_maj = []
+    scores = {key:[] for key in scorers.keys()}
+    scores_maj = {key:[] for key in scorers.keys()}
     for test_index in test_folds:
         if probas is not None:
             _probas = probas[test_index]
@@ -173,15 +167,17 @@ def majority_vote_CV(
             _weights = sample_weight[test_index]
         else:
             _weights = None
-        scores.append(scorer.score(
-            y[test_index], pred=pred[test_index], probas=_probas,
-              labels=labels, sample_weight=_weights
-            ))
-        scores_maj.append(scorer.score_maj(
-            y[test_index], group[test_index],
-            pred=pred[test_index], probas=_probas, labels=labels,
-            sample_weight=_weights, vote_type=vote_type
-            ))
+
+        for key in scorers.keys():
+            scores[key].append(scorers[key].score(
+                y[test_index], pred=pred[test_index], probas=_probas,
+                  labels=labels, sample_weight=_weights
+                ))
+            scores_maj[key].append(scorers[key].score_maj(
+                y[test_index], group[test_index],
+                pred=pred[test_index], probas=_probas, labels=labels,
+                sample_weight=_weights, vote_type=vote_type
+                ))
 
 
     if return_predictions:
