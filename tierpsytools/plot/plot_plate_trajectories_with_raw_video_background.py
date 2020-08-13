@@ -52,7 +52,6 @@ def get_trajectory_data(featuresfilepath):
                            'y': f['trajectories_data']['coord_y'],\
                            'frame_number': f['trajectories_data']['frame_number'],\
                            'worm_id': f['trajectories_data']['worm_index_joined']})
-    # {'midbody_speed': f['timeseries_data']['speed_midbody']}
     return(df)
 
 
@@ -70,7 +69,7 @@ def plot_trajectory(featurefilepath,
     if not ax:
         fig, ax = plt.subplots(**kwargs)
  
-    # Rotate your trajectories when you plot a rotated image
+    # Rotate trajectories when plotting a rotated image
     if rotate:
         if not img_shape:
             raise ValueError('Image shape missing for rotation.')
@@ -80,11 +79,12 @@ def plot_trajectory(featurefilepath,
             df['y'] = height - df['y']
         
     # Downsample frames for plotting
-    if downsample < 1 or downsample == None: # input error handling
-        downsample = 1
-        
-    ax.scatter(x=df['x'][::downsample], y=df['y'][::downsample],\
-                s=10, c=df['frame_number'][::downsample], cmap='plasma')
+    if downsample <= 1 or downsample == None: # input error handling
+        ax.scatter(x=df['x'], y=df['y'], s=10, c=df['frame_number'],\
+                   cmap='plasma')
+    else:
+        ax.scatter(x=df['x'][::downsample], y=df['y'][::downsample],\
+                   s=10, c=df['frame_number'][::downsample], cmap='plasma')
     #ax.tick_params(labelsize=5)
     ax.axes.get_xaxis().set_visible(False)
     ax.axes.get_yaxis().set_visible(False)
