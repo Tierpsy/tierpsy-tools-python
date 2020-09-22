@@ -6,6 +6,7 @@ Created on Wed Apr  8 19:28:09 2020
 @author: em812
 """
 import numpy as np
+import pandas as pd
 
 def remove_MOAs_based_on_drug_count(
         feat, meta,
@@ -64,15 +65,17 @@ def remove_MOAs_based_on_drug_count(
         return feat, meta
 
 def compounds_with_low_effect_univariate(
-        feat, drug_name, drug_dose,
-        fdr=0.05, test_type='muticlass',
-        keep_names=['DMSO', 'NoCompound']
+        feat, drug_name, drug_dose, control='DMSO',
+        fdr=0.05, test='ANOVA', comparison_type='multiclass',
+        ignore_names=['NoCompound'],
+        return_pvals=False
         ):
     """
     Remove drugs when the number of features significantly different to DMSO
     for any dose is lower than the threshold.
     The statistical significance of the difference between a compound dose and
-    the DMSO is assessed based on individual ANOVA tests for each feature.
+    the DMSO is assessed based on individual statistical tests for each feature
+    (option for parametric and non-parameteric tests).
     The Benjamini-Hochberg method is used to control the false discovery rate.
     param:
         feat : dataframe
@@ -81,9 +84,13 @@ def compounds_with_low_effect_univariate(
             defines the type of drug in each sample
         drug_dose : array, shape=(n_samples)
             defines the drug dose in each sample (expects 0 dose for controls)
+        control : str
+            the name of the control samples in the drug_name array
         fdr : float < 1.0 and > 0.0
             false discovery rate parameter in Benjamini-Hochberg method
-        test_type : str, options: ['binary', 'multiclass', 'binary_each_dose']
+        test : str, options: ['ANOVA', 'Kruskal_Wallis', 'Wilkoxon_Rank_Sum']
+            The type of statistical test to perform for each feature.
+        comparison_type : str, options: ['binary', 'multiclass', 'binary_each_dose']
             defines the groups seen in the statistical test.
             If 'binary', then the controls are compared to all the drug samples
             pooled together.
@@ -93,27 +100,59 @@ def compounds_with_low_effect_univariate(
             feture. Each test compares one dose to the controls. If any of the
             tests reaches the significance thresshold, then the feature
             is considered significant.
-        keep_names : list or None, optional
-            list of names from the drugname_column to keep without checking
-            for significance
-        return_nonsignificant : bool, optional
-            return the names of the drugs that are removed from the
-            dataset
+        ignore_names : list or None, optional
+            list of names from the drug_name array to ignore in the comparisons
+            (in addition to the control)
+        return_pvals: bool
+            Wether or not to return the pvalues of all the comparisons
     return:
         signif_effect_drugs : list
         low_effect_drugs : list
         significant : dictionary
             mask of significant features for each drug name
     """
-    from sklearn.feature_selection import f_classif
+    from scipy.stats import kruskal, ranksums, f_oneway
     import pdb
     from statsmodels.stats.multitest import multipletests
+    from functools import partial
 
-    if keep_names is None:
-        keep_names = []
+    if ignore_names is None:
+        ignore_names = []
+    ignore_names.append(control)
+
+    def stats_test(X, y, test, **kwargs):
+        from joblib import Parallel, delayed
+
+        def _one_feat(samples, **kwargs):
+            return test(*samples, **kwargs)
+
+        parallel = Parallel(n_jobs=-1, verbose=True)
+        func = delayed(_one_feat)
+
+        res = parallel(
+            func([sample[:,ix]
+                  for sample in [np.array(X[y==iy]) for iy in np.unique(y)]],
+                 **kwargs)
+            for ix in range(X.shape[1]))
+
+        ss = [s for s,p in res]
+        ps = [p for s,p in res]
+
+        return ss, ps
+
+    if test == 'ANOVA':
+        func = partial(stats_test, test=f_oneway)
+    elif test.startswith('Kruskal'):
+        func = partial(stats_test, test=kruskal, nan_policy='raise')
+    elif test.startswith('Wilkoxon'):
+        if comparison_type=='multiclass':
+            raise ValueError(
+                'The Wilkoxon rank sum test can not be used with the multiclass comparison type, '+\
+                'as it can only be used for comparison between two samples.')
+        func = partial(stats_test, test=ranksums)
 
     #n_feat = feat.shape[1]
-    drug_names = np.array([drug for drug in np.unique(drug_name) if drug not in keep_names])
+    drug_names = np.array([drug for drug in np.unique(drug_name) if drug not in ignore_names])
 
     pvals = []
     for idrug,drug in enumerate(drug_names):
@@ -121,39 +160,41 @@ def compounds_with_low_effect_univariate(
 
         # For each dose get significant features using Benjamini-Hochberg
         # method with FDR=fdr
-        X = feat[np.isin(drug_name, [drug,'DMSO'])]
-        y = drug_dose[np.isin(drug_name, [drug,'DMSO'])]
+        X = feat[np.isin(drug_name, [drug, control])]
+        y = drug_dose[np.isin(drug_name, [drug, control])]
 
-        if test_type=='multiclass':
+        if comparison_type=='multiclass':
             try:
-                _, c_pvals = f_classif(X, y)
+                _, c_pvals = func(X, y)
             except ValueError:
                 pdb.set_trace()
 
             pvals.append(c_pvals)
 
-        elif test_type=='binary_each_dose':
+        elif comparison_type=='binary_each_dose':
             c_pvals=[]
             for idose, dose in enumerate(np.unique(y)):
                 if dose == 0:
                     continue
-                _fscores, _pvals = f_classif(X[np.isin(y,[0,dose])], y[np.isin(y,[0,dose])])
+                _, _pvals = func(X[np.isin(y,[0,dose])], y[np.isin(y,[0,dose])])
 
-                pdb.set_trace()
                 c_pvals.append(_pvals)
 
             pvals.append(c_pvals)
 
-        elif test_type=='binary':
+        elif comparison_type=='binary':
             y[y>0] = 1
             try:
-                _, c_pvals = f_classif(X, y)
+                _, c_pvals = func(X, y)
             except ValueError:
                 pdb.set_trace()
             pvals.append(c_pvals)
 
+        else:
+            raise ValueError('Comparison type not recognised.')
+
     try:
-        significant,_,_,_ = multipletests(
+        significant, pvals_corrected,_,_ = multipletests(
             np.vstack(pvals).reshape(-1), alpha=fdr, method='fdr_bh',
             is_sorted=False, returnsorted=False
             )
@@ -161,26 +202,33 @@ def compounds_with_low_effect_univariate(
     except:
         pdb.set_trace()
 
-    if test_type=='binary' or test_type=='multiclass':
+    if comparison_type=='binary' or comparison_type=='multiclass':
         significant = significant.reshape(np.array(pvals).shape)
+        pvals_corrected = pvals_corrected.reshape(np.array(pvals).shape)
         signif_effect_drugs = np.any(significant, axis=1)
     else:
-        significant = significant.reshape(-1, X.shape[1])
         ndose = [len(x) for x in pvals]
+        significant = significant.reshape(-1, X.shape[1])
         significant = np.split(significant, np.cumsum(ndose))[:-1]
+        pvals_corrected = pvals_corrected.reshape(-1, X.shape[1])
+        pvals_corrected = np.split(pvals_corrected, np.cumsum(ndose))[:-1]
         signif_effect_drugs = np.any([np.any(x, axis=0) for x in significant], axis=1)
 
-    signif_effect_drugs = np.append(drug_names[signif_effect_drugs], keep_names)
+    signif_effect_drugs = drug_names[signif_effect_drugs]
     low_effect_drugs = drug_names[~np.isin(drug_names, signif_effect_drugs)]
 
     significant = {drug:mask for drug,mask in zip(drug_names, significant)}
+    pvals_corrected = {drug:mask for drug,mask in zip(drug_names, pvals_corrected)}
 
-    return signif_effect_drugs, low_effect_drugs, significant
+    if return_pvals:
+        return signif_effect_drugs, low_effect_drugs, significant, pvals_corrected
+    else:
+        return signif_effect_drugs, low_effect_drugs, significant
 
-def remove_drugs_with_low_effect_multivariate(
-        feat, drug_name, drug_dose, signif_level=0.05,
+def compounds_with_low_effect_multivariate(
+        feat, drug_name, drug_dose, control='DMSO', signif_level=0.05,
         cov_estimator = 'EmpiricalCov',
-        keep_names = ['DMSO', 'NoCompound']
+        ignore_names = None
         ):
     """
     Remove drugs when all the doses of the drug are very close to DMSO.
@@ -191,13 +239,18 @@ def remove_drugs_with_low_effect_multivariate(
     param:
         feat : dataframe
             feature dataframe
-        meta : dataframe
-            dataframe with sample identification data
+        drug_name : array-like
+            the drug name per row in feat
+        drug_dose : array-like
+            the drug dose per row in feat
+        control : str
+            the name of the control samples in the drug_name array
         signif_level = float
             Defines the significance level for the p-value of the hypothesis
             test for each drug dose based on the MD^2 distribution.
         cov_estimator : 'RobustCov' or 'EmpiricalCov'
             Specifies the method to estimate the covariance matrix.
+        ignore_names : drug names to ignore in the comparisons (in addition to control)
 
     return:
         signif_effect_drugs : list
@@ -210,13 +263,17 @@ def remove_drugs_with_low_effect_multivariate(
     from scipy.stats import chi2
     from time import time
 
+    if ignore_names is None:
+        ignore_names = []
+    ignore_names.append(control)
+
     if cov_estimator == 'RobustCov':
         estimator = MinCovDet()
     elif cov_estimator == 'EmpiricalCov':
         estimator = EmpiricalCovariance()
 
     print('Estimating covariance matrix...'); st_time=time()
-    estimator.fit(feat[drug_name=='DMSO'])
+    estimator.fit(feat[drug_name==control])
     print('Done in {:.2f}.'.format(time()-st_time))
 
     drug_names = np.unique(drug_name)
@@ -224,7 +281,7 @@ def remove_drugs_with_low_effect_multivariate(
     mah_dist = {}
     signif_effect_drugs = []
     for idr, drug in enumerate(drug_names):
-        if drug in keep_names:
+        if drug in ignore_names:
             continue
 
         print('Checking compound {} ({}/{})...'.format(
@@ -247,9 +304,125 @@ def remove_drugs_with_low_effect_multivariate(
         if any(p_vals < signif_level):
             signif_effect_drugs.append(drug)
 
-    signif_effect_drugs.extend(keep_names)
     low_effect_drugs = drug_names[~np.isin(drug_names, signif_effect_drugs)]
 
     return signif_effect_drugs, low_effect_drugs, mah_dist
 
+def compounds_with_low_effect_classification(
+        feat, drug_name, drug_dose, control='DMSO', metric='recall',
+        cutoff=0.50, estimator = None, n_folds=5, ignore_names = None
+        ):
+    """
+    Find drugs with significant effect and drugs with low effect based on the
+    ability of a classifier to distinguish the drug doses from the control
+    with a performance better than chance.
+    param:
+        feat : dataframe
+            feature dataframe
+        drug_name : array-like
+            the drug name per row in feat
+        drug_dose : array-like
+            the drug dose per row in feat
+        control : str
+            the name of the control samples in the drug_name array
+        metric : str, options=['recall', 'mcc', 'balanced_accuracy']
+            the classification metric to use for the comparison.
+        cutoff : float
+            The score value that will be the threshold to consider a dose
+            significantly different to the control (if score>cutoff, then
+            the effect is considered significant)
+        estimator : None or sklearn classifier object
+            Specifies the classifier.
+        n_folds : int
+            number of folds for the cross-validation
+        ignore_names : drug names to ignore in the comparisons (in addition to control)
+
+    return:
+        signif_effect_drugs : list
+        low_effect_drugs : list
+        mah_dist : dictionary
+            A dictionary with the mahalanobis distances per dose for every
+            drug name
+    """
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import matthews_corrcoef, balanced_accuracy_score, recall_score
+    from sklearn.model_selection import StratifiedKFold
+    import pdb
+
+    drug_name = np.array(drug_name)
+    drug_dose = np.array(drug_dose)
+
+    if ignore_names is None:
+        ignore_names = []
+    ignore_names.append(control)
+
+    if estimator is None:
+        estimator = LogisticRegression(penalty='l1', C=10, solver='liblinear', max_iter=500)
+
+    cv_split = StratifiedKFold(n_splits=n_folds)
+
+    if metric == 'recall':
+        scorer = recall_score
+    elif metric == 'mcc':
+        scorer = matthews_corrcoef
+    elif metric == 'balanced_accuracy':
+        scorer = balanced_accuracy_score
+
+    drug_names = np.unique(drug_name)
+
+    scores = {}
+    signif_effect_drugs = []
+    for idr, drug in enumerate(drug_names):
+        if drug in ignore_names:
+            continue
+
+        print('Checking compound {} ({}/{})...'.format(
+            drug, idr+1, drug_names.shape[0]-len(ignore_names)))
+
+        doses = np.sort(np.unique(drug_dose[drug_name==drug]))
+        _iscores = []
+        _iscores_shuffled = []
+        for dose in doses:
+            if feat[(drug_name==drug) & (drug_dose==dose)].shape[0]<n_folds:
+                _iscores.append(np.nan)
+                continue
+            print('dose {}..'.format(dose))
+            X = pd.concat([
+                feat[(drug_name==drug) & (drug_dose==dose)],
+                feat[drug_name==control]
+                ], axis=0).values
+
+            ncontrol = np.sum(drug_name==control)
+
+            y = np.concatenate([ np.ones(X.shape[0]-ncontrol), np.zeros(ncontrol) ])
+
+            _cvscores = []
+            for train_index, test_index in cv_split.split(X, y):
+                estimator.fit(X[train_index], y[train_index])
+                y_pred = estimator.predict(X[test_index])
+                _cvscores.append( scorer(y[test_index], y_pred) )
+
+            _cvscores_shuffled = []
+            y = np.random.shuffle(y)
+            for train_index, test_index in cv_split.split(X, y):
+                estimator.fit(X[train_index], y[train_index])
+                y_pred = estimator.predict(X[test_index])
+                _cvscores_shuffled.append( scorer(y[test_index], y_pred) )
+
+            _iscores.append( np.mean(_cvscores) )
+            _iscores_shuffled.append( np.mean(_cvscores_shuffled) )
+
+        if np.any([s>ss*1.1 for s,ss in zip(_iscores, _iscores_shuffled)
+                   if (s is not np.nan and ss is not np.nan)]):
+        #if np.any([s>cutoff for s in _iscores if s is not np.nan]):
+            signif_effect_drugs.append(drug)
+
+        _iscores = pd.DataFrame({'dose': doses, metric: _iscores, '_'.join([metric, 'shuffled']): _iscores_shuffled})
+        scores[drug] = _iscores
+
+
+    low_effect_drugs = drug_names[
+        ~np.isin(drug_names, [signif_effect_drugs+ignore_names])]
+
+    return signif_effect_drugs, low_effect_drugs, scores
 
