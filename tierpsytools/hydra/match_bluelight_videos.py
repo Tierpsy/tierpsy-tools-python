@@ -73,7 +73,7 @@ def check_time_differences(df, tol=3):
     print('Double-check matching of {}'.format(dodgy))
 
 
-def get_triplet(df_g):
+def get_triplet(df_g, parentpath=False):
 
     assert df_g.shape[0] % 3 == 0, \
         f'{df_g.shape[0]} videos matching{df_g.name}, not divisible by 3'
@@ -90,12 +90,13 @@ def get_triplet(df_g):
     out_df['imgstore_poststim'] = sorted_df_g['imgstore'].values[2::3]
     out_df['time_poststim'] = sorted_df_g['time'].values[2::3]
     # print(len(sorted_df_g['parent_path'].unique()))
-    out_df.loc[:, 'parent_path'] = sorted_df_g['parent_path'].unique()
+    if parentpath:
+        out_df.loc[:, 'parent_path'] = sorted_df_g['parent_path'].unique()
 
     return out_df
 
 
-def match_bluelight_videos(df):
+def match_bluelight_videos(df, fullpath=False):
     """
     match_bluelight_videos: return the matching prestim/bluelight/poststim
     triplets of videos typical of a bluelight-screening
@@ -131,9 +132,11 @@ def match_bluelight_videos(df):
     df[['date_YYYYMMDD', 'time']] = df['datetime'].str.split(pat='_', n=1,
                                                              expand=True)
     df.drop(columns=['datetime'], inplace=True)
+
     # get the path (not down to the file). This way it will be conserved after
     # the next steps
-    df['parent_path'] = df['full_path'].apply(lambda x: x.parent.parent)
+    if fullpath:
+        df['parent_path'] = df['full_path'].apply(lambda x: x.parent.parent)
 
     # group df by variables that *should* isolate a video triplet:
     # imgstore_root (inputted during experiment), rig, camera_serial, date
@@ -194,14 +197,6 @@ if __name__ == '__main__':
     wd = Path('/Volumes/behavgenom$/Ida/Data/Hydra'
               + '/SyngentaStrainScreen/RawVideos')
 
+    wd = Path('/Volumes/behavgenom$/Ida/Data/Hydra/DiseaseScreen/RawVideos')
     # call function that already finds all imgstores and put them in neat df
     df = match_bluelight_videos_in_folder(wd)
-
-
-
-
-
-
-
-
-
