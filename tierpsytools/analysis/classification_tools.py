@@ -37,7 +37,10 @@ def cv_predict(
         X_test = scaler.transform(X[test_index])
 
         # Train classifier
-        estimator.fit(X_train, y[train_index], sample_weight=sample_weight[train_index])
+        if sample_weight is None:
+            estimator.fit(X_train, y[train_index])
+        else:
+            estimator.fit(X_train, y[train_index], sample_weight=sample_weight[train_index])
 
         # Predict
         y_pred = estimator.predict(X_test)
@@ -57,9 +60,7 @@ def cv_predict(
     y = np.array(y)
     labels = np.unique(y)
 
-    if sample_weight is None:
-        sample_weight = np.ones(y.shape)
-    else:
+    if sample_weight is not None:
         sample_weight = np.array(sample_weight)
 
     pred = np.empty_like(y)
@@ -68,13 +69,10 @@ def cv_predict(
     parallel = Parallel(n_jobs=-1, verbose=True)
     func = delayed(_one_fit)
 
-    try:
-        res = parallel(
-            func(X, y, group, train_index, test_index, estimator,
-                 sample_weight, scale_function=scale_function)
-            for train_index, test_index in splitter.split(X, y, group))
-    except:
-        pdb.set_trace()
+    res = parallel(
+        func(X, y, group, train_index, test_index, estimator,
+             sample_weight, scale_function=scale_function)
+        for train_index, test_index in splitter.split(X, y, group))
 
     for  test_index,y_pred,y_probas,_ in res:
         pred[test_index] = y_pred
