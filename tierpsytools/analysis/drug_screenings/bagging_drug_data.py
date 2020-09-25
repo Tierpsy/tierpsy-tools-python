@@ -11,6 +11,15 @@ import random
 import warnings
 import pdb
 
+def get_drug2moa_mapper(drug_id, moa_id):
+    drug_id = np.array(drug_id)
+    moa_id = np.array(moa_id)
+
+    drugs, ind = np.unique(drug_id, return_index=True)
+    moas = moa_id[ind]
+
+    return dict(zip(drugs, moas))
+
 def shuffle_data(df, arrays, random_state=None):
     df = df.sample(frac=1, replace=False, random_state=random_state)
     for i,a in enumerate(arrays):
@@ -79,9 +88,9 @@ class DrugDataBagging:
 
         if self.average_dose:
             if self.bluelight is None:
-                Xbag = Xbag.groupby(by=[drug_bag, dose_bag]).mean()
+                Xbag = Xbag.groupby(by=[drug_bag, dose_bag]).agg(np.nanmean)
             else:
-                Xbag = Xbag.groupby(by=[drug_bag, dose_bag, blue_bag]).mean()
+                Xbag = Xbag.groupby(by=[drug_bag, dose_bag, blue_bag]).agg(np.nanmean)
                 blue_bag = Xbag.index.get_level_values(2).to_numpy()
             drug_bag = Xbag.index.get_level_values(0).to_numpy()
             dose_bag = Xbag.index.get_level_values(1).to_numpy()
@@ -130,17 +139,23 @@ class DrugDataBagging:
             self.blue_bags = blue_bags
 
 
-    def fit_transform(self, X, drug, dose, shuffle=False):
+    def fit_transform(self, X, drug, dose, bluelight=None, shuffle=False):
         if hasattr(self, 'Xbags'):
             raise ValueError('DrugBagging instsnce already fitted.')
 
-        self.fit(X, drug, dose, shuffle=shuffle)
+        self.fit(X, drug, dose, bluelight=bluelight, shuffle=shuffle)
 
-        if self.bluelight is None:
-            return self.Xbags, self.drug_bags, self.dose_bags
-        else:
-            return self.Xbags, self.drug_bags, self.dose_bags, self.blue_bags
+        meta = []
+        for bag in range(len(self.Xbags)):
+            metabag = pd.DataFrame({
+                'drug_type': self.drug_bags[bag],
+                'drug_dose': self.dose_bags[bag],
+                })
+            if self.bluelight is not None:
+                metabag = metabag.assign(bluelight=self.blue_bags[bag])
+            meta.append(metabag)
 
+        return self.Xbags, meta
 
 class SingleDrugBagging(DrugDataBagging):
     def __init__(self, n_bags=10, replace=True,
@@ -170,6 +185,74 @@ class SingleDrugBagging(DrugDataBagging):
         else:
             return self.Xbags, self.dose_bags, self.blue_bags
 
+
+class DrugDataBaggingByMOA(DrugDataBagging):
+    def __init__(self, multiplier=1, replace=True, n_per_dose=None, frac_per_dose=None,
+               random_state=None, average_dose=False,
+               bluelight_conditions=True):
+
+        self.multiplier = multiplier
+        self.replace = replace
+
+        if n_per_dose is None and frac_per_dose is None:
+            raise ValueError('Must define either number of samples or ' +
+                             'fraction of samples per dose.')
+        elif n_per_dose is not None and frac_per_dose is not None:
+            raise ValueError('Define either number of samples or ' +
+                             'fraction of samples per dose. Cannot '+
+                             'use both parameters.')
+        self.n = n_per_dose
+        self.frac = frac_per_dose
+        self.random_state = random_state
+        self.average_dose = average_dose
+        super()._parse_bluelight_conditions(bluelight_conditions)
+
+    def fit(self, X, moa, drug, dose, bluelight=None, shuffle=False):
+        ndrugs_per_moa = pd.DataFrame({'MOA_group':moa, 'drug_type':drug}).groupby(
+            by=['MOA_group'])['drug_type'].nunique()
+        frac_per_moa = ndrugs_per_moa.max() / ndrugs_per_moa
+
+        mapper = get_drug2moa_mapper(drug, moa)
+
+        self.n_bags = {}
+
+        X_a = {}; meta_a = {}
+        for imoa in frac_per_moa.index:
+            ind = (moa==imoa)
+
+            n_bags = int(self.multiplier*round(frac_per_moa[imoa]))
+            self.n_bags[imoa] = n_bags
+
+            bagger = DrugDataBagging(
+                n_bags=n_bags, replace=self.replace, frac_per_dose=self.frac,
+                random_state=self.random_state, average_dose=self.average_dose,
+                bluelight_conditions=self.bluelight)
+
+            if bluelight is None:
+                X_a[imoa], meta_a[imoa] = bagger.fit_transform(
+                        X[ind], drug[ind], dose[ind], shuffle=False)
+            else:
+                X_a[imoa], meta_a[imoa] = bagger.fit_transform(
+                        X[ind], drug[ind], dose[ind], bluelight=bluelight[ind],
+                        shuffle=False)
+
+            X_a[imoa] = pd.concat(X_a[imoa], axis=0)
+            meta_a[imoa] = pd.concat(meta_a[imoa], axis=0)
+
+        self.X_a = pd.concat(X_a.values())
+        self.meta_a = pd.concat(meta_a.values())
+        self.meta_a = self.meta_a.assign(MOA_group=pd.Series(self.meta_a['drug_type']).map(mapper))
+
+        return
+
+    def fit_transform(self, X, moa, drug, dose, bluelight=None, shuffle=False):
+
+        if hasattr(self, 'X_a'):
+            raise ValueError('DrugBagging instance already fitted.')
+
+        self.fit(X, moa, drug, dose, bluelight, shuffle)
+
+        return self.X_a, self.meta_a
 
 
 class StrainAugmentDrugData:
