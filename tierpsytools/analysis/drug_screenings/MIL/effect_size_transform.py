@@ -9,8 +9,42 @@ from warnings import warn
 import numpy as np
 import pandas as pd
 from tierpsytools.feature_processing.scaling_class import scalingClass
+from tierpsytools.analysis.drug_screenings.drug_class import drugClass_v1
+from time import time
+import pdb
+
+def bags_to_effect_size_params(Xs, metas, inparams, mapper):
+    """
+    Takes bags of tierpsy features (list of tierpsy features sets for
+    the same drugs) and creates one dataset of effect size parameters.
+    If the number of bags given is n, then each drug will have n rows of
+    effect size parameters in the returned dataset P.
+    """
+    P = []; y = []; drug = []
+    for X, xmeta in zip(Xs, metas):
+        transformer = DrugEffectSizeParams(**inparams)
+        ip, iy, idr = transformer.fit_transform(
+            X, xmeta['drug_type'], xmeta['drug_dose'],
+            xmeta['drug_type'].map(mapper).values, control='DMSO',
+            return_scaled=False)
+        P.append(ip)
+        y.append(iy)
+        drug.append(idr)
+
+    P = np.concatenate(P, axis=0)
+    y = np.concatenate(y)
+    drug = np.concatenate(drug)
+
+    return P, y, drug
 
 class effectSizeTransform():
+
+    """
+    Transforms tierpsy features for multiple drugs at multiple doses
+    (generally multiple replicates per dose) to a set of effect size
+    parameters. Each drug is characterised by a single vector
+    of effect size parameters.
+    """
 
     valid_effect_types = ['max', 'mean', 'median']
 
@@ -60,7 +94,7 @@ class effectSizeTransform():
     def scaler(self, scalingtype):
 
         if isinstance(scalingtype, str) or scalingtype is None:
-            scalerinstance = scalingClass(function = scalingtype)
+            scalerinstance = scalingClass(scaling = scalingtype)
         elif hasattr(scalingtype, 'fit'):
             scalerinstance = scalingtype
         else:
@@ -216,13 +250,13 @@ class effectSizeTransform():
                     information for each sample.
 
         """
-        from tierpsytools.analysis.drug_screenings.drug_class import drugClass
+        from tierpsytools.analysis.drug_screenings.drug_class import drugClass, drugClass_v1
 
         bags, control = self.check_input(bags, control, doses)
 
         parameters = np.zeros((len(bags), control.shape[1]*self.n_param))
         for ibag, bag in enumerate(bags):
-            if isinstance(bag, drugClass):
+            if isinstance(bag, (drugClass, drugClass_v1)):
                 feat = bag.feat
                 dose = bag.drug_dose
             else:
@@ -274,4 +308,76 @@ class effectSizeTransform():
         self.classifier = estimator.fit(parameters, bagLabels)
 
         return
+
+
+class DrugEffectSizeParams(effectSizeTransform):
+    """
+    Wrapper for the effectSizeTransform class that handles pandas dataframes
+    and pandas series as input.
+    """
+    def __init__(
+            self,
+            effect_type = ['max','mean'],
+            cutoff = None,
+            normalize_effect = None,
+            binary_effect = False,
+            scale_per_compound = False,
+            scale_samples = None, #'minmax_scale', #'scale' #normalize #
+            scale_params = None):
+
+        super().__init__(effect_type, cutoff, normalize_effect,
+            binary_effect, scale_per_compound, scale_samples,
+            scale_params)
+
+    def fit(self, feat, drug, dose, moa, control='DMSO'):
+
+        # Create drug instances
+        namelist = np.unique(drug)
+        namelist = namelist[namelist!=control]
+
+        # get feature names
+        cols = feat.columns.to_numpy()
+        # get parameters names
+        p_cols = ['_'.join([col, eff]) for col in cols for eff in self.effect_type]
+
+        druglist = [drugClass_v1(
+            feat[drug==idg], idg, dose[drug==idg], MOAinfo=moa[drug==idg])
+            for idg in namelist]
+
+        control_feat = feat[drug==control]
+
+        est = effectSizeTransform(
+            self.effect_type, self.cutoff, self.normalize_effect,
+            self.binary_effect, self.scale_per_compound, self.scale_samples,
+            self.param_scaler)
+        est.fit(druglist, control_feat)
+
+        if  est.effect_size_parameters.shape[1]==0:
+            pdb.set_trace()
+            raise Exception('empty parameters matrix')
+
+        scaled_params = est.scale_parameters(apply_mask=False)
+
+        self.P = pd.DataFrame(est.effect_size_parameters, columns=p_cols)
+        self.P_scaled = pd.DataFrame(scaled_params, columns=p_cols)
+        self.y = np.array([drug.moa['MOA_group'] for drug in druglist])
+        self.drugs = namelist
+
+        return
+
+    def fit_transform(self, feat, drug, dose, moa, control='DMSO', return_scaled=True):
+        if not hasattr(self, 'P'):
+            self.fit(feat, drug, dose, moa, control=control)
+
+        if return_scaled:
+            return self.P_scaled, self.y, self.drugs
+        else:
+            return self.P, self.y, self.drugs
+
+    def get_parameters(self, scaled=False):
+        if scaled:
+            return self.P_scaled
+        else:
+            return self.P
+
 

@@ -280,11 +280,11 @@ def vertical_stacking_CV(
         for i,key in enumerate(Xs.keys()):
             weight = np.mean(l0_scores[key]['majority_vote']['accuracy'])
             sample_weight.append(np.repeat(weight, l0g_predictions[i].shape[0]))
+        sample_weight = np.concatenate(sample_weight)
     else:
         sample_weight = None
 
     l0g_predictions = np.concatenate(l0g_predictions, axis=0)
-    sample_weight = np.concatenate(sample_weight)
     l0g_y = np.concatenate(l0g_y, axis=0)
     l0g_group = np.concatenate(l0g_group, axis=0)
 
@@ -317,6 +317,83 @@ def vertical_stacking_CV(
     l1_scores['majority_vote'] = node.scores_group
 
     return l0_scores, l1_scores, l1_scores_grouped
+
+
+def strain_stack_per_dose_CV(
+        Xs, ys, groups, doses, blues,
+        base_estimator, stacked_estimator,
+        splitter, drug_moa_mapper,
+        vote_type='counts', pred_type='probas',
+        scale_function=None,
+        stacked_scale_function=None,
+        retrain_estimators=False,
+        n_jobs=-1, scorer=None,
+        add_bluelight_id_to_stacked_pred=False
+        ):
+
+    """
+    Single-level VERTICAL STACKING
+
+    Level 1:
+        Single compound MOA classification
+    Level 0:
+        Strains
+
+    strains, y ---> Strain-specific well-level predictions -->
+        majority_vote --> strain-specific compound-level predictions
+
+    Vertically Stacked compound-level predictions, Y_group* --> Final compound-level predictions
+    """
+    from tierpsytools.analysis.drug_screenings.bagging_drug_data import StrainAugmentDrugData
+    from sklearn.preprocessing import OneHotEncoder
+
+    l0_scores = {key: {} for key in Xs.keys()}
+    l1_scores = {}
+
+    l0_pred = {}
+    for (key, X), (key, y), (key, group) in zip(Xs.items(), ys.items(), groups.items()):
+        node = StackNode(base_estimator, splitter, is_grouped_data=True,
+                         vote_type=vote_type, scale_function=scale_function,
+                         n_jobs=n_jobs, scorer=scorer)
+        node.fit(X, y, group)
+
+        l0_scores[key]['standard'] = node.scores
+        l0_scores[key]['majority_vote'] = node.scores_group
+
+        # Get non-grouped predictions
+        targ, pred = node.get_targets_predictions(pred_type, group_pred=False)
+        assert all(node.y == ys[key])
+        assert all(node.group == groups[key])
+        l0_pred[key] = pd.DataFrame(pred, columns=node.labels)
+
+    # Concatenate predictions
+    augmenter = StrainAugmentDrugData(
+        n_augmented_bags=1, replace=False, frac_per_dose=1, random_state=None,
+        bluelight_conditions=True)
+    X_aug, group_aug, dose_aug, blue_aug = augmenter.fit_transform(
+        l0_pred, groups, doses, blues, shuffle=True)
+
+    # Add blue_id feature
+    if add_bluelight_id_to_stacked_pred:
+        enc = OneHotEncoder(sparse=False)
+        blue_ids = enc.fit_transform(blue_aug.reshape(-1,1))
+        blue_ids = pd.DataFrame(blue_ids, columns=enc.get_feature_names(input_features=['bluelight']))
+        X_aug = pd.concat([X_aug,blue_ids], axis=1)
+
+    # drop samples with nans
+    keep_ids = ~X_aug.isna().any(axis=1).values
+
+    # Get classes
+    y_aug = pd.Series(group_aug).map(drug_moa_mapper).values
+
+    node = StackNode(stacked_estimator, splitter, is_grouped_data=True,
+                     scale_function=stacked_scale_function, n_jobs=n_jobs,
+                     scorer=scorer, vote_type='probas')
+    node.fit(X_aug[keep_ids], y_aug[keep_ids], group=group_aug[keep_ids])
+    l1_scores['standard'] = node.scores
+    l1_scores['majority_vote'] = node.scores_group
+
+    return l0_scores, l1_scores
 
 
 

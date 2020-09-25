@@ -87,7 +87,16 @@ if __name__=="__main__":
     X=np.random.rand(8,2)
     k=2
 
-    splitter=StratifiedGroupKFold(n_splits=k)
+    splitter=StratifiedGroupKFold(n_splits=k, random_seed=143)
+
+    for train_ind, test_ind in splitter.split(X,y,groups):
+        print(train_ind, test_ind)
+
+
+    groups = [1,2,2,3,3,4,4]
+    y=[1,1,1,0,0,0,0]
+    X=np.random.rand(7,2)
+    k=2
 
     for train_ind, test_ind in splitter.split(X,y,groups):
         print(train_ind, test_ind)
