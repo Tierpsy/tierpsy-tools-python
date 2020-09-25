@@ -116,14 +116,19 @@ def compounds_with_low_effect_univariate(
     from statsmodels.stats.multitest import multipletests
     from functools import partial
 
+    # Ignore the control and any names defined by user
     if ignore_names is None:
         ignore_names = []
     ignore_names.append(control)
 
+    # Local function for parallel processing of univariate tests for each drug
     def stats_test(X, y, test, **kwargs):
         from joblib import Parallel, delayed
 
         def _one_feat(samples, **kwargs):
+            samples = [s[~np.isnan(s)] for s in samples if not all(np.isnan(s))]
+            if len(samples)<2:
+                return (np.nan, np.nan)
             return test(*samples, **kwargs)
 
         parallel = Parallel(n_jobs=-1, verbose=True)
@@ -140,6 +145,7 @@ def compounds_with_low_effect_univariate(
 
         return ss, ps
 
+    # Create the function that will test every feature of a given drug
     if test == 'ANOVA':
         func = partial(stats_test, test=f_oneway)
     elif test.startswith('Kruskal'):
@@ -151,10 +157,12 @@ def compounds_with_low_effect_univariate(
                 'as it can only be used for comparison between two samples.')
         func = partial(stats_test, test=ranksums)
 
-    #n_feat = feat.shape[1]
+    # Get the list of drug names to test
     drug_names = np.array([drug for drug in np.unique(drug_name) if drug not in ignore_names])
 
+    # Run the univariate tests for every drug in drug_names
     pvals = []
+    significant = []
     for idrug,drug in enumerate(drug_names):
         print('Univariate tests for compound {}...'.format(drug))
 
@@ -162,14 +170,21 @@ def compounds_with_low_effect_univariate(
         # method with FDR=fdr
         X = feat[np.isin(drug_name, [drug, control])]
         y = drug_dose[np.isin(drug_name, [drug, control])]
+        if comparison_type=='binary':
+            y[y>0] = 1
 
-        if comparison_type=='multiclass':
+        if comparison_type=='multiclass' or comparison_type=='binary':
             try:
                 _, c_pvals = func(X, y)
             except ValueError:
                 pdb.set_trace()
 
+            c_sign, c_pvals,_,_ = multipletests(
+                c_pvals, alpha=fdr, method='fdr_bh',
+                is_sorted=False, returnsorted=False
+                )
             pvals.append(c_pvals)
+            significant.append(c_sign)
 
         elif comparison_type=='binary_each_dose':
             c_pvals=[]
@@ -180,50 +195,37 @@ def compounds_with_low_effect_univariate(
 
                 c_pvals.append(_pvals)
 
+            _shape = np.array(c_pvals).shape
+            c_sign, c_pvals,_,_ = multipletests(
+                np.vstack(c_pvals).reshape(-1), alpha=fdr, method='fdr_bh',
+                is_sorted=False, returnsorted=False
+                )
+            c_pvals = c_pvals.reshape(_shape)
+            c_sign = c_sign.reshape(_shape)
             pvals.append(c_pvals)
-
-        elif comparison_type=='binary':
-            y[y>0] = 1
-            try:
-                _, c_pvals = func(X, y)
-            except ValueError:
-                pdb.set_trace()
-            pvals.append(c_pvals)
+            significant.append(c_sign)
 
         else:
             raise ValueError('Comparison type not recognised.')
 
-    try:
-        significant, pvals_corrected,_,_ = multipletests(
-            np.vstack(pvals).reshape(-1), alpha=fdr, method='fdr_bh',
-            is_sorted=False, returnsorted=False
-            )
-        assert all(~np.isnan(significant))
-    except:
-        pdb.set_trace()
-
     if comparison_type=='binary' or comparison_type=='multiclass':
-        significant = significant.reshape(np.array(pvals).shape)
-        pvals_corrected = pvals_corrected.reshape(np.array(pvals).shape)
-        signif_effect_drugs = np.any(significant, axis=1)
+        error = np.all(np.isnan(pvals), axis=1)
+        signif_effect = np.any(np.array(significant), axis=1)
     else:
-        ndose = [len(x) for x in pvals]
-        significant = significant.reshape(-1, X.shape[1])
-        significant = np.split(significant, np.cumsum(ndose))[:-1]
-        pvals_corrected = pvals_corrected.reshape(-1, X.shape[1])
-        pvals_corrected = np.split(pvals_corrected, np.cumsum(ndose))[:-1]
-        signif_effect_drugs = np.any([np.any(x, axis=0) for x in significant], axis=1)
+        error = np.array([np.all(np.isnan(x)) for x in pvals])
+        signif_effect = np.any([np.any(x, axis=0) for x in significant], axis=1)
 
-    signif_effect_drugs = drug_names[signif_effect_drugs]
-    low_effect_drugs = drug_names[~np.isin(drug_names, signif_effect_drugs)]
+    error_drugs = drug_names[error]
+    signif_effect_drugs = drug_names[signif_effect & ~error]
+    low_effect_drugs = drug_names[~error & ~signif_effect]
 
     significant = {drug:mask for drug,mask in zip(drug_names, significant)}
-    pvals_corrected = {drug:mask for drug,mask in zip(drug_names, pvals_corrected)}
+    pvals = {drug:mask for drug,mask in zip(drug_names, pvals)}
 
     if return_pvals:
-        return signif_effect_drugs, low_effect_drugs, significant, pvals_corrected
+        return signif_effect_drugs, low_effect_drugs, error_drugs, significant, pvals
     else:
-        return signif_effect_drugs, low_effect_drugs, significant
+        return signif_effect_drugs, low_effect_drugs, error_drugs
 
 def compounds_with_low_effect_multivariate(
         feat, drug_name, drug_dose, control='DMSO', signif_level=0.05,
@@ -310,7 +312,7 @@ def compounds_with_low_effect_multivariate(
 
 def compounds_with_low_effect_classification(
         feat, drug_name, drug_dose, control='DMSO', metric='recall',
-        cutoff=0.50, estimator = None, n_folds=5, ignore_names = None
+        pval_thres=0.05, estimator = None, n_folds=5, ignore_names = None
         ):
     """
     Find drugs with significant effect and drugs with low effect based on the
@@ -327,7 +329,12 @@ def compounds_with_low_effect_classification(
             the name of the control samples in the drug_name array
         metric : str, options=['recall', 'mcc', 'balanced_accuracy']
             the classification metric to use for the comparison.
-        cutoff : float
+        pval_thres : float
+            the significance threshold for the comparison of the cv score obtained
+            with the classifie to the distribution of random scores based on
+            permutations. If th pvalue from this comparison is smaller than
+            the pval_thres, then the drug dose is considered to have a real effect.
+        cutoff : float or None
             The score value that will be the threshold to consider a dose
             significantly different to the control (if score>cutoff, then
             the effect is considered significant)
@@ -382,9 +389,14 @@ def compounds_with_low_effect_classification(
         doses = np.sort(np.unique(drug_dose[drug_name==drug]))
         _iscores = []
         _iscores_shuffled = []
+        _iscores_random = []
+        pvals = []
         for dose in doses:
             if feat[(drug_name==drug) & (drug_dose==dose)].shape[0]<n_folds:
                 _iscores.append(np.nan)
+                _iscores_shuffled.append(np.nan)
+                _iscores_random.append(np.nan)
+                pvals.append(np.nan)
                 continue
             print('dose {}..'.format(dose))
             X = pd.concat([
@@ -401,23 +413,33 @@ def compounds_with_low_effect_classification(
                 estimator.fit(X[train_index], y[train_index])
                 y_pred = estimator.predict(X[test_index])
                 _cvscores.append( scorer(y[test_index], y_pred) )
-
-            _cvscores_shuffled = []
-            y = np.random.shuffle(y)
-            for train_index, test_index in cv_split.split(X, y):
-                estimator.fit(X[train_index], y[train_index])
-                y_pred = estimator.predict(X[test_index])
-                _cvscores_shuffled.append( scorer(y[test_index], y_pred) )
-
             _iscores.append( np.mean(_cvscores) )
+
+            y_shuffled = np.random.permutation(y)
+            _cvscores_shuffled = []
+            for train_index, test_index in cv_split.split(X, y_shuffled):
+                estimator.fit(X[train_index], y_shuffled[train_index])
+                y_pred = estimator.predict(X[test_index])
+                _cvscores_shuffled.append( scorer(y_shuffled[test_index], y_pred) )
             _iscores_shuffled.append( np.mean(_cvscores_shuffled) )
 
-        if np.any([s>ss*1.1 for s,ss in zip(_iscores, _iscores_shuffled)
-                   if (s is not np.nan and ss is not np.nan)]):
+            randsc = []
+            for i in range(10000):
+                randsc.append(recall_score(y, np.random.permutation(y)))
+            _iscores_random.append( np.mean(randsc) )
+
+            pvals.append( sum(np.array(randsc)>=np.mean(_cvscores))/len(randsc) )
+
+
+        if np.any([p<pval_thres for p in pvals if p is not np.nan]):
         #if np.any([s>cutoff for s in _iscores if s is not np.nan]):
             signif_effect_drugs.append(drug)
 
-        _iscores = pd.DataFrame({'dose': doses, metric: _iscores, '_'.join([metric, 'shuffled']): _iscores_shuffled})
+        _iscores = pd.DataFrame({
+            'dose': doses, metric: _iscores,
+            '_'.join([metric, 'shuffled']): _iscores_shuffled,
+            '_'.join([metric, 'random']): _iscores_random,
+            '_'.join([metric, 'pval']): pvals})
         scores[drug] = _iscores
 
 
