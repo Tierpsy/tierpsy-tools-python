@@ -19,7 +19,7 @@ def drop_ventrally_signed(feat):
 
     return feat
 
-def select_feat_set(features,set_name):
+def select_feat_set(features, set_name, align_bluelight=False):
     """
     Keep only features in a predefined tierpsy feature set
     feat_set options:
@@ -42,14 +42,17 @@ def select_feat_set(features,set_name):
 
     ft_set = pd.read_csv(set_file,header=None).loc[:,0].to_list()
 
+    if align_bluelight:
+        bluelight_conditions = ['prestim', 'bluelight', 'poststim']
+        ft_set = ['_'.join([ft, blue]) for ft in ft_set for blue in bluelight_conditions]
+
     check = [ft in features.columns for ft in ft_set]
     if not np.all(check):
         warnings.warn('The features dataframe does not contain all the features in the selected features set. \n'
-              '{} of the {} features are missing.'.format(np.sum(~check),ft_set.shape[0]))
+              'Only {} of the {} features exist in the dataframe.'.format(np.sum(check), len(ft_set)))
         ft_set = [ft for ft in ft_set if ft in features.columns]
 
     return features[ft_set]
-
 
 def select_feat(feat, files=[], featList=[]):
     """
