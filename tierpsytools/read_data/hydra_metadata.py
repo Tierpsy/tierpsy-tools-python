@@ -194,10 +194,14 @@ def align_bluelight_conditions(
     feat = feat.set_index(merge_on_cols)
 
     feat = feat[feat['bluelight']=='prestim'].join(
-        feat[feat['bluelight']=='bluelight'],
-        how=how, lsuffix='', rsuffix='_bluelight').join(
-        feat[feat['bluelight']=='poststim'],
-        how=how, lsuffix='', rsuffix='_poststim')
+            feat[feat['bluelight']=='bluelight'],
+            how=how,
+            lsuffix='',
+            rsuffix='_bluelight').join(
+                feat[feat['bluelight']=='poststim'],
+                how=how,
+                lsuffix='',
+                rsuffix='_poststim')
 
     # Add the prestim suffix to the bluelight-specific columns
     feat = feat.rename(
