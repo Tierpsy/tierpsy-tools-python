@@ -24,7 +24,7 @@ def plot_feature_boxplots(
             title+=' - p-value = {}'.format(pvalues[i])
         plt.figure(figsize=figsize)
         plt.title(title)
-        plt.boxplot([feat.loc[y_class==cl,ft] for cl in classes])
+        plt.boxplot([feat_to_plot.loc[y_class==cl,ft] for cl in classes])
         plt.xticks(list(range(1,classes.shape[0]+1)), classes)
         plt.ylabel(ft)
         if xlabel is not None:
