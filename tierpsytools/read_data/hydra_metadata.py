@@ -69,9 +69,9 @@ def read_hydra_metadata(
     add_bluelight : bool, optional
         Add a metadata column that specifies the bluelight condition for each row.
         The default is True.
-    bluelight_label_location_in_imgstore_stem : int, optional
-        Where to file the bluelight specification in the imgstore name.
-        The default is 3.
+    bluelight_labels : list, optional
+        The names of the bluelight conditions as they appear in the file names.
+        Only used if add_bluelight is True.
 
     Returns
     -------
