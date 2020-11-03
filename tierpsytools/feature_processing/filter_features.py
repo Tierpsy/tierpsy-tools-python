@@ -137,23 +137,36 @@ def cap_feat_values(feat,cutoff=1e15,remove_all_nan=True):
 
     return feat
 
-def replace_nan_inf(feat):
+def impute_nan_inf(feat, groupby=None):
     """
-    REPLACE_NAN_INF: replace NaN and inf values with feature average
+    IMPUTE_NAN_INF: replace NaN and inf values with feature average
     param:
-        feat = data frame or np array with features (rows = samples, columns = features)
+        feat : dataframe or np array
+            Features matrix (rows = samples, columns = features)
+        groupby : array or list of arrays
+            Ids based on which the feat dataframe will be grouped. The nans
+            will be imputed with the mean values of each group independently.
     return:
-        feat = filtered feature matrix
+        feat = feature matrix without nan/inf
     """
 
     isarray = False
-    if isinstance(feat,np.ndarray):
+    if isinstance(feat, np.ndarray):
         isarray = True
         feat = pd.DataFrame(feat)
 
     feat = feat.replace([np.inf, -np.inf], np.nan)
-    feat = feat.fillna(feat.mean())
 
+    # fill in nans with mean values of cv features for each strain separately
+    if groupby is None:
+        feat = feat.fillna(feat.mean())
+    else:
+        feat = [x for _,x in feat.groupby(by=groupby, sort=True)]
+        for i in range(len(feat)):
+            feat[i] = feat[i].fillna(feat[i].mean())
+        feat = pd.concat(feat, axis=0).sort_index()
+
+    # Covert back to array
     if isarray:
         feat = feat.values
 
