@@ -45,7 +45,7 @@ def copy_table(table_names, src_fname, dst_fname):
     if not dst_fname.parent.exists():
         dst_fname.parent.mkdir(parents=True, exist_ok=True)
     with h5py.File(src_fname, 'r') as fids:
-        with h5py.File(dst_fname, 'r+') as fidd:
+        with h5py.File(dst_fname, 'a') as fidd:
             for table_name in table_names:
                 fids.copy(table_name, fidd['/'])
 
