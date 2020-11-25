@@ -10,7 +10,7 @@ Created on Wed Oct 21 12:49:55 2020
 import numpy as np
 from sklearn import metrics
 from scipy.cluster.hierarchy import linkage, fcluster
-
+import pdb
 
 def purity_score(y_true, y_pred):
     # compute contingency matrix (also called confusion matrix)
@@ -21,7 +21,7 @@ def purity_score(y_true, y_pred):
 
 def hierarchical_purity(data, labels,
                         linkage_matrix=None, linkage_method='average',
-                        criterion='distance', n_random=1000
+                        criterion='distance', n_random=100
                         ):
 
     if linkage_matrix is None:
@@ -32,6 +32,7 @@ def hierarchical_purity(data, labels,
     purity = []
     purity_rand = []
     n_clusters = []
+
     for dist in distances:
         cl_ids = fcluster(linkage_matrix, t=dist, criterion='distance')
         purity.append(purity_score(labels, cl_ids))
@@ -41,7 +42,8 @@ def hierarchical_purity(data, labels,
 
         p_rand = []
         for i in range(n_random):
-            rand_cl_ids = np.random.randint(0, n_clust, size=data.shape[0])
+            #rand_cl_ids = np.random.randint(0, n_clust, size=data.shape[0])
+            rand_cl_ids = np.random.permutation(cl_ids)
             p_rand.append(purity_score(labels, rand_cl_ids))
 
         purity_rand.append(p_rand)

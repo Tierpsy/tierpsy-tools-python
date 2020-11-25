@@ -108,7 +108,7 @@ def majority_vote_CV_parallel(
     y = np.array(y)
     group = np.array(group)
 
-    parallel = Parallel(n_jobs=-1, verbose=True)
+    parallel = Parallel(n_jobs=n_jobs, verbose=True)
     func = delayed(_one_fit)
 
     scores = parallel(

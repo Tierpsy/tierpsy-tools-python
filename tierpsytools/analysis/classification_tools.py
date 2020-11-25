@@ -66,7 +66,7 @@ def cv_predict(
     pred = np.empty_like(y)
     probas = np.empty((X.shape[0], labels.shape[0]))
 
-    parallel = Parallel(n_jobs=-1, verbose=True)
+    parallel = Parallel(n_jobs=n_jobs, verbose=True)
     func = delayed(_one_fit)
 
     res = parallel(
@@ -94,9 +94,7 @@ def cv_predict_single(
     X = np.array(X)
     y = np.array(y)
 
-    if sample_weight is None:
-        sample_weight = np.ones(y.shape)
-    else:
+    if sample_weight is not None:
         sample_weight = np.array(sample_weight)
 
     pred = np.empty_like(y)
@@ -114,7 +112,10 @@ def cv_predict_single(
         X_test = scaler.transform(X[test_index])
 
         # Train classifier
-        estimator.fit(X_train, y[train_index], sample_weight[train_index])
+        if sample_weight is not None:
+            estimator.fit(X_train, y[train_index], sample_weight[train_index])
+        else:
+            estimator.fit(X_train, y[train_index])
         trained_estimators.append(estimator)
 
         # Predict
@@ -205,7 +206,7 @@ def get_fscore(
         return fscore
 
 def rearrange_confusion_matrix(cm, n_clusters):
-    from sklearn.cluster.bicluster import SpectralCoclustering
+    from sklearn.cluster import SpectralCoclustering
 
     clst = SpectralCoclustering(n_clusters=n_clusters).fit(cm)
 
