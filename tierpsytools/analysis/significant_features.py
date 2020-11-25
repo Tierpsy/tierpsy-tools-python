@@ -12,7 +12,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 def plot_feature_boxplots(
-        feat_to_plot, y_class, scores, pvalues=None,
+        feat_to_plot, y_class, scores, feat_df, pvalues=None,
         figsize=None, saveto=None, xlabel=None,
         close_after_plotting=False
         ):
@@ -123,7 +123,7 @@ def k_significant_feat(
     # Plot a boxplot for each feature, showing its distribution in each class
     if plot:
         plot_feature_boxplots(
-            feat.iloc[:, top_ft_ids[:k_to_plot]], y_class, scores,
+            feat.iloc[:, top_ft_ids[:k_to_plot]], y_class, scores, feat,
             pvalues=pvalues, figsize=figsize, saveto=saveto, xlabel=xlabel,
             close_after_plotting=close_after_plotting)
 
