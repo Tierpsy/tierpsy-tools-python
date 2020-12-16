@@ -8,7 +8,7 @@ Created on Thu Jul  2 14:33:38 2020
 import numpy as np
 import pandas as pd
 from tierpsytools.analysis.classification_tools import cv_predict
-from tierpsytools.analysis.drug_screenings.MIL.majority_vote import \
+from tierpsytools.drug_screenings.MIL.majority_vote import \
     majority_vote_CV, get_majority_vote, get_sum_of_votes, _get_y_group
 from tierpsytools.analysis.classification_tools import cv_score
 from tierpsytools.analysis.helper import _get_multi_sclassifscorers
@@ -344,7 +344,7 @@ def strain_stack_per_dose_CV(
 
     Vertically Stacked compound-level predictions, Y_group* --> Final compound-level predictions
     """
-    from tierpsytools.analysis.drug_screenings.bagging_drug_data import StrainAugmentDrugData
+    from tierpsytools.drug_screenings.bagging_drug_data import StrainAugmentDrugData
     from sklearn.preprocessing import OneHotEncoder
 
     l0_scores = {key: {} for key in Xs.keys()}

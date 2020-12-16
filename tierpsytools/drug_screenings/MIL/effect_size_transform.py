@@ -8,8 +8,8 @@ Created on Thu Apr 23 10:51:28 2020
 from warnings import warn
 import numpy as np
 import pandas as pd
-from tierpsytools.feature_processing.scaling_class import scalingClass
-from tierpsytools.analysis.drug_screenings.drug_class import drugClass_v1
+from tierpsytools.preprocessing.scaling_class import scalingClass
+from tierpsytools.drug_screenings.drug_class import drugClass_v1
 from time import time
 import pdb
 
@@ -202,7 +202,7 @@ class effectSizeTransform():
         return parameters
 
     def check_input(self, bags, control, doses):
-        from tierpsytools.analysis.drug_screenings.drug_class import drugClass
+        from tierpsytools.drug_screenings.drug_class import drugClass
 
         if (isinstance(bags[0], np.ndarray) and not isinstance(control, np.ndarray)) \
             or (isinstance(bags[0], pd.DataFrame) and not isinstance(control, pd.DataFrame)) \
@@ -250,7 +250,7 @@ class effectSizeTransform():
                     information for each sample.
 
         """
-        from tierpsytools.analysis.drug_screenings.drug_class import drugClass, drugClass_v1
+        from tierpsytools.drug_screenings.drug_class import drugClass, drugClass_v1
 
         bags, control = self.check_input(bags, control, doses)
 

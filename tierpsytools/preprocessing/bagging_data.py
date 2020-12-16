@@ -354,7 +354,7 @@ class DataBaggingByClass(DataBagging):
 #%%
 if __name__=="__main__":
     import matplotlib.pyplot as plt
-    from tierpsytools.analysis.drug_screenings.bagging_drug_data import \
+    from tierpsytools.drug_screenings.bagging_drug_data import \
         SingleDrugBagging, DrugDataBagging, DrugDataBaggingByMOA
 
     # One drug at different doses

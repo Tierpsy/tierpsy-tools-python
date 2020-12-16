@@ -8,7 +8,7 @@ Created on Fri May  8 18:01:33 2020
 import numpy as np
 import pandas as pd
 from tierpsytools.analysis.classification_tools import cv_predict
-from tierpsytools.feature_processing.scaling_class import scalingClass
+from tierpsytools.preprocessing.scaling_class import scalingClass
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import normalize
 from joblib import Parallel, delayed

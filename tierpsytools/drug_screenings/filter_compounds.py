@@ -72,7 +72,7 @@ def compare_drug_to_control_univariate(
         test='ANOVA', comparison_type='multiclass',
         fdr=0.05, multitest_method='fdr_by', n_jobs=-1,
         ):
-    from tierpsytools.analysis.drug_screenings.filter_compounds_helper import \
+    from tierpsytools.drug_screenings.filter_compounds_helper import \
         _low_effect_univariate, _low_effect_LMM, _multitest_correct
 
     # Check input
@@ -89,6 +89,7 @@ def compare_drug_to_control_univariate(
         if random_effect is None:
             raise ValueError('Must give the random_effect variable for the '+
                              'LMM tests.')
+
         pvals = _low_effect_LMM(
             X, drug_dose, random_effect, control_dose=control_dose,
             fdr=fdr, multitest_method=multitest_method,
@@ -98,7 +99,7 @@ def compare_drug_to_control_univariate(
 
 
 def compounds_with_low_effect_univariate(
-        feat, drug_name, drug_dose, random_effect=None,
+        feat, drug_name, drug_dose=None, random_effect=None,
         control='DMSO',
         test='ANOVA', comparison_type='multiclass',
         multitest_method='fdr_by', fdr=0.05,
@@ -123,8 +124,9 @@ def compounds_with_low_effect_univariate(
         feature dataframe, shape=(n_samples, n_features)
     drug_name : array-like, shape=(n_samples)
         defines the type of drug in each sample
-    drug_dose : array-like, shape=(n_samples)
-        defines the drug dose in each sample (expects 0 dose for controls)
+    drug_dose : array-like or None, shape=(n_samples)
+        defines the drug dose in each sample.
+        If None, it is assumed that each drug was tested at a single dose.
     random_effect : array-like, shape=(n_samples), optional. Default is None.
         The variable that is considered to be a random effect, when the LMM
         test is used. Must be a categorical variable with categories that
@@ -163,6 +165,17 @@ def compounds_with_low_effect_univariate(
     significant : dictionary
         mask of significant features for each drug name
     """
+    if drug_dose is None:
+        drug_dose = np.ones(drug_name.shape)
+        drug_dose[drug_name==control] = 0
+
+    # get the dose entry for the control
+    control_dose = np.unique(drug_dose[drug_name==control])
+    if control_dose.shape[0]>1:
+        raise ValueError('The dose assinged to the control data is not '+
+                         'unique.')
+    control_dose = control_dose[0]
+
     # Ignore the control and any names defined by user
     if ignore_names is None:
         ignore_names = []
@@ -182,12 +195,6 @@ def compounds_with_low_effect_univariate(
 
         # get mask for the samples of the drug and the control
         mask = np.isin(drug_name, [drug, control])
-        # get the dose entry for the control
-        control_dose = np.unique(drug_dose[drug_name==control])
-        if control_dose.shape[0]>1:
-            raise ValueError('The dose assinged to the control data is not '+
-                             'unique.')
-        control_dose = control_dose[0]
 
         # mask the random effect variable if it exists
         randeff = random_effect[mask] if random_effect is not None else None
@@ -491,9 +498,9 @@ if __name__=="__main__":
             n_jobs=-1, return_pvals=True)
     lmm_time = time()-st_time
 
-    plt.figure(figsize=(8,8))
-    (pvals.T).hist(bins=50)
-    plt.savefig('test_fig_filter_compounds_{}.png'.format(test))
+    # plt.figure(figsize=(8,8))
+    # (pvals.T).hist(bins=50)
+    # plt.savefig('test_fig_filter_compounds_{}.png'.format(test))
 
     test = 'Kruskal'
     st_time = time()
@@ -506,6 +513,6 @@ if __name__=="__main__":
             n_jobs=-1, return_pvals=True)
     kruskal_time = time()-st_time
 
-    plt.figure(figsize=(8,8))
-    (pvals_krus.T).hist(bins=50)
-    plt.savefig('test_fig_filter_compounds_{}.png'.format(test))
+    # plt.figure(figsize=(8,8))
+    # (pvals_krus.T).hist(bins=50)
+    # plt.savefig('test_fig_filter_compounds_{}.png'.format(test))

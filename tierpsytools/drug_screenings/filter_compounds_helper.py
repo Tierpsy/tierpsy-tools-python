@@ -65,7 +65,7 @@ def _low_effect_univariate(
         def _one_fit(ift, samples, **kwargs):
             samples = [s[~np.isnan(s)] for s in samples if not all(np.isnan(s))]
             if len(samples)<2:
-                return (np.nan, np.nan)
+                return ift, (np.nan, np.nan)
             return ift, test(*samples, **kwargs)
 
         parallel = Parallel(n_jobs=n_jobs, verbose=True)
