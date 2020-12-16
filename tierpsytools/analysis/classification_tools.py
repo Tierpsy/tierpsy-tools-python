@@ -12,7 +12,7 @@ Created on Thu Apr 23 19:33:54 2020
 @author: em812
 """
 import numpy as np
-from tierpsytools.feature_processing.scaling_class import scalingClass
+from tierpsytools.preprocessing.scaling_class import scalingClass
 from tierpsytools.analysis.helper import _get_multi_sclassifscorers
 from joblib import Parallel, delayed
 import pdb
@@ -225,7 +225,7 @@ def rearrange_confusion_matrix(cm, n_clusters):
 
 def plot_confusion_matrix(
         y_true, y_pred, classes=None, normalize=False, title=None, figsize=(8,8),
-        cmap=None, saveto=None, cluster=False, n_clusters=3
+        cmap=None, saveto=None, cluster=False, n_clusters=3, add_colorbar=False
         ):
     """
     This function prints and plots the confusion matrix.
@@ -235,6 +235,8 @@ def plot_confusion_matrix(
     from sklearn.metrics import confusion_matrix
     from sklearn.utils.multiclass import unique_labels
     from mpl_toolkits.axes_grid1 import make_axes_locatable
+    plt.rcParams['svg.fonttype'] = 'none'
+    plt.rcParams['font.sans-serif'] = 'Arial'
 
 #    if not title:
 #        if normalize:
@@ -270,12 +272,13 @@ def plot_confusion_matrix(
     fig, ax = plt.subplots(figsize=figsize)
     im = ax.imshow(cm, interpolation='nearest', cmap=cmap)
 
-    # create an axes on the right side of ax. The width of cax will be 5%
-    # of ax and the padding between cax and ax will be fixed at 0.05 inch.
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.05)
+    if add_colorbar:
+        # create an axes on the right side of ax. The width of cax will be 5%
+        # of ax and the padding between cax and ax will be fixed at 0.05 inch.
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        ax.figure.colorbar(im, cax=cax)
 
-    ax.figure.colorbar(im, cax=cax)
     # We want to show all ticks...
     ax.set(xticks=np.arange(cm.shape[1]),
            yticks=np.arange(cm.shape[0]),

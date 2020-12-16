@@ -9,7 +9,7 @@ Example script to generate shuffled source plates from a library plate
 
 Sourceplates file required for each robot run with these headings.
     (additional headings allowed but these are *required*):
-    
+
     - drug_type (or whatever is in the well)
     - source_well
     - column
@@ -19,7 +19,7 @@ Sourceplates file required for each robot run with these headings.
     - source_robotslot
     - robot_run_number
     - robot_runlog_filename
-    
+
 Robot runlogs refecerence in 'robot_runlog_filename' required in path
 
 Preprocessing of runlogs is only required in order to remove the rows from
@@ -33,10 +33,8 @@ from tierpsytools.hydra.compile_metadata import merge_robot_metadata
 from tierpsytools import EXAMPLES_DIR
 import warnings
 
-AUXILIARY_FILES = EXAMPLES_DIR / Path('hydra_metadata/' + 
-                                      'data/' +
-                                      'AuxiliaryFiles/' +
-                                      'sourceplates')
+AUXILIARY_FILES = Path(EXAMPLES_DIR) / 'hydra_metadata' / 'data' / \
+    'AuxiliaryFiles' / 'sourceplates'
 PREPROCESSING_REQUIRED = False
 OVERWRITE = True
 
@@ -57,15 +55,15 @@ def preprocessing_robot_runlog(runlog_file):
     rlog = pd.read_csv(file)
     rlog = rlog.drop(rlog[rlog['source_slot'] == rlog['destination_slot']
                           ].index)
-    
+
     outfile = runlog_file.parent / (runlog_file.stem + '_clean.csv')
     rlog.to_csv(outfile, index=False)
-    
+
     return rlog
-      
-# %%    
+
+# %%
 if __name__ == '__main__':
-    
+
     if PREPROCESSING_REQUIRED:
         robot_logs = list(AUXILIARY_FILES.rglob('*runlog.csv'))
 
@@ -95,7 +93,7 @@ if __name__ == '__main__':
                                        'destination_well'],
                                    ignore_index=True,
                                    inplace=True)
-        
+
         # create shuffle plate id
         robot_metadata['shuffled_plate_id'] = [r.source_plate_id +
                                                '_sh%02d' %(r.robot_run_number)
@@ -103,17 +101,17 @@ if __name__ == '__main__':
                                                robot_metadata.iterrows()]
         robot_metadata['is_bad_well'].fillna(False,
                                              inplace=True)
-        
+
         outfile = Path(str(file).replace('.csv', '_shuffled.csv'))
         if outfile.exists():
             if OVERWRITE == False:
                 warnings.warn('shuffled sourceplate file already exists for: {}\n'.
-                              format(file) + 
+                              format(file) +
                               'File not overwritten')
-            else:  
+            else:
                 warnings.warn('shuffled sourceplate file overwritten :\n {}'.
                               format(file))
-                
+
                 robot_metadata.to_csv(outfile,
                                       index=False)
                 del robot_metadata
