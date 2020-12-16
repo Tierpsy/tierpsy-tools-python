@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+ATTENTION!
+This module will be deprecated in favor of the more generally
+applicable module tierpsytools.analysis.bagging_data
+
 Created on Wed Aug  5 12:55:52 2020
 
 @author: em812

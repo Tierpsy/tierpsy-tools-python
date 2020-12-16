@@ -6,34 +6,11 @@ Created on Fri Nov 15 14:39:29 2019
 @author: em812
 """
 import pdb
-from tierpsytools.feature_processing.scaling_class import scalingClass
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-
-def plot_feature_boxplots(
-        feat_to_plot, y_class, scores, feat_df, pvalues=None,
-        figsize=None, saveto=None, xlabel=None,
-        close_after_plotting=False
-        ):
-
-    classes = np.unique(y_class)
-    for i,ft in enumerate(feat_to_plot):
-        title = ft+'\n'+'score={:.3f}'.format(scores[i])
-        if pvalues is not None:
-            title+=' - p-value = {}'.format(pvalues[i])
-        plt.figure(figsize=figsize)
-        plt.title(title)
-        plt.boxplot([feat_to_plot.loc[y_class==cl,ft] for cl in classes])
-        plt.xticks(list(range(1,classes.shape[0]+1)), classes)
-        plt.ylabel(ft)
-        if xlabel is not None:
-            plt.xlabel(xlabel)
-        if saveto:
-            plt.savefig(saveto/ft)
-        if close_after_plotting:
-            plt.close()
-    return
+from sklearn.decomposition import PCA
+from tierpsytools.analysis.significant_features_helper import plot_feature_boxplots
+from tierpsytools.preprocessing.scaling_class import scalingClass
 
 def k_significant_feat(
         feat, y_class, k=5, score_func='f_classif', scale=None,
@@ -62,7 +39,7 @@ def k_significant_feat(
             Default is 'f_classif'.
         scale: None, str or function, optional
             If string 'standardize', 'minmax_scale', the
-            tierpsytools.feature_processing.scaling_class.scalingClass is used
+            tierpsytools.preprocessing.scaling_class.scalingClass is used
             to scale the features.
             Otherwise the used can input a function that scales features.
             Default is None (no scaling).
@@ -123,7 +100,7 @@ def k_significant_feat(
     # Plot a boxplot for each feature, showing its distribution in each class
     if plot:
         plot_feature_boxplots(
-            feat.iloc[:, top_ft_ids[:k_to_plot]], y_class, scores, feat,
+            feat.iloc[:, top_ft_ids[:k_to_plot]], y_class, scores,
             pvalues=pvalues, figsize=figsize, saveto=saveto, xlabel=xlabel,
             close_after_plotting=close_after_plotting)
 
@@ -131,6 +108,124 @@ def k_significant_feat(
         return feat.columns[top_ft_ids].to_list(), (scores, pvalues), support
     else:
         return feat.columns[top_ft_ids].to_list(), scores, support
+
+
+def mRMR_feature_selection(
+        feat, k=10, y_class=None, redundancy=None, relevance=None,
+        redundancy_func='pearson_corr', get_abs_redun=False,
+        relevance_func='kruskal',
+        n_bins=10, mrmr_criterion='MIQ',
+        plot=True, k_to_plot=None, close_after_plotting=False,
+        saveto=None, figsize=None
+        ):
+    """
+    Finds k features with the best mRMR score (minimum Redunduncy, Maximum Relevance).
+    The redundancy and relevance can be passed to the function as pre-calculated
+    measures. If they are not precalculated, then they can be calculated using
+    multual information or another criterion from the available options.
+    param:
+        feat: array-like, shape=(n_samlples, n_features)
+            The feature matrix
+        y_class: array-like, shape=(n_samples)
+            Vector with the class of each sample. If the reduncdance and relevance
+            measures are precacaluclated, this parameter is ignored.
+        k: integer or 'all'
+            Number of fetures to select. If all, all the features will be ranked
+            and the mRMR scores for every feature will be calculated. The 'all'
+            option is not recommended when the number of candidate features is large.
+        redundancy: array-like shape=(n_features, n_features) or None
+            pre-computed correlation-like measure that will be used as the
+            redundancy component of the mRMR score.
+            Attention: the values must be normalized to match the relevance
+            component.
+            If None, the redundancy will be calculated based on the redundancy_func.
+        relevance: array-like, shape=(n_features,) or None
+            Pre-computed significance measure for each candidate feature
+            that will be used as the relevance component of the mRMR score.
+            Attention: the values must be normalized to match the redundancy
+            component.
+            If None, the relevance will be calculated based on the relevance_func
+            using the y_class information.
+        redundancy_func: str or function, optional
+            The function to use to calculate the redundancy component of the mRMR
+            score of a feature with respect to a feature set.
+            If string, then one can choose between the options:
+                'mutual_info', 'pearson_corr', 'kendall_corr' and 'spearman_corr'.
+            Otherwise, the user needs to input a function that takes two
+            arrays and returns a score.
+            or a single array with scores.
+            Default is 'pearson_corr'.
+            Attention: when mutual_info is used, the features are discretized
+            in bins. The number of bins can be customized using the parameter
+            n_bins.
+        get_abs_redun : bool, default is False
+            This parameter is used only when a function instance is passed as
+            redundancy_func or when pre-computed redundancy measures are passed.
+            When redundancy_func is a string, then this parameter is ignored.
+            With this parameter, the user can choose whether to get the abs
+            values of the redundancy scores before summing up to get the redundancy
+            component of the mrmr score. For example, if we use a correlation-like
+            measure, low negative values  (anticorrelation) signify high redundancy
+            similar to high positive  values. In this case, abs values must be used
+            for the mrmr score.
+        relevance_func: str or function, optional
+            If string 'kruskal', 'f_classif', 'chi2', 'mutual_info' then the
+            function f_classif, chi2 or mutual_info_classif
+            from sklearn.feature_selection will be used.
+            Otherwise, the user needs to input a function that takes a feature
+            array x and the class labels y, and returns a score and a pvalue
+            or a single score.
+            Default is 'kruskal'.
+        n_bins: int, default is 5
+            number of bins to use to discretize the features to calculate the
+            mutual_info.
+    return:
+        list of top ranked features
+        mrmr_scores : array, shape=(k,)
+            The mrmr_scores of the selected features.
+        support : array of booleans
+            True for the selected features, False for the rest
+    """
+    from tierpsytools.analysis.significant_features_helper import get_redundancy, get_relevance, mRMR_select
+
+    k_type_error = "Data type of k not recognized."
+
+    if isinstance(k, str):
+        if k == 'all':
+            k = feat.shape[1]
+        else:
+            print(k_type_error)
+    elif not isinstance(k, int):
+        print(k_type_error)
+
+    if redundancy is None:
+        redundancy = get_redundancy(feat, redundancy_func, get_abs_redun, n_bins)
+    else:
+        if get_abs_redun:
+            redundancy = np.abs(redundancy)
+    if relevance is None:
+        relevance = get_relevance(feat, y_class, relevance_func)
+
+    # Initialize selected feature set with the feature with max relevance
+    top_ft_ids = np.argmax(relevance)
+    mrmr_scores = np.inf
+
+    # Add with forward selection
+    for i in range(k-1):
+        top_ft_ids, score = mRMR_select(top_ft_ids, redundancy, relevance, criterion=mrmr_criterion)
+        mrmr_scores = np.append(mrmr_scores, score)
+
+    support = np.zeros(feat.shape[1]).astype(bool)
+    support[top_ft_ids] = True
+
+    # Plot a boxplot for each feature, showing its distribution in each class
+    if plot:
+        plot_feature_boxplots(
+            feat.iloc[:, top_ft_ids[:k_to_plot]], y_class, mrmr_scores,
+            figsize=figsize, saveto=saveto,
+            close_after_plotting=close_after_plotting)
+
+    return feat.columns[top_ft_ids].to_list(), mrmr_scores, support
 
 
 
@@ -141,7 +236,6 @@ def top_feat_in_PCs(X, pc=0, scale=False, k='auto', feat_names=None):
 
     """
     import pandas as pd
-    from sklearn.decomposition import PCA
 
     if isinstance(X,np.ndarray):
         X = pd.DataFrame(X, columns=feat_names)
@@ -236,7 +330,7 @@ def k_significant_from_classifier(
             Default is 5.
         scale: None, str or function, optional
             If string 'standardize', 'minmax_scale', the
-            tierpsytools.feature_processing.scaling_class.scalingClass is used
+            tierpsytools.preprocessing.scaling_class.scalingClass is used
             to scale the features.
             Otherwise the used can input a function that scales features.
             Default is None (no scaling).
@@ -256,10 +350,12 @@ def k_significant_from_classifier(
             True for the selected features, False for the rest
         plot
     """
-    from tierpsytools.feature_processing.scaling_class import scalingClass
+    from tierpsytools.preprocessing.scaling_class import scalingClass
 
-    if plot and k_to_plot is None:
-        k_to_plot = k
+    if k_to_plot is None:
+        plot = False
+    else:
+        plot = True
 
     if isinstance(feat,np.ndarray):
         feat = pd.DataFrame(feat,columns=feat_names)
@@ -303,10 +399,7 @@ def k_significant_from_classifier(
 
 
 if __name__=="__main__":
-    from sklearn.svm import SVC
     from sklearn.linear_model import LogisticRegression
-    from sklearn.decomposition import PCA
-    import numpy as np
 
     X1 = np.concatenate(
         [np.random.normal(loc=0.0, scale=1, size=100),

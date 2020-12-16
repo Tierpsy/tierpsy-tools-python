@@ -39,10 +39,7 @@ class scalingClass():
     def __init__(self, scaling='standardize', axis=None, norm='l2'):
         ## Define class attributes
         self.scaling = scaling
-        self.std_ = None
-        self.mean_ = None
-        self.min_ = None
-        self.diff_ = None
+
         if axis is None:
             if scaling == 'normalize':
                 self.axis_ = 1
@@ -68,12 +65,29 @@ class scalingClass():
             ValueError('Data type not recognised in scalingClass. Input can be list, numpy array or pandas dataframe.')
         return X, isdataframe
 
+    def _reset(self):
+        """Reset internal data-dependent state of the scaler, if necessary.
+        __init__ parameters are not touched.
+        """
+        if self._fitted:
+            if hasattr(self, 'mean_'):
+                del self.mean_
+                del self.std_
+            if hasattr(self, 'min_'):
+                del self.min_
+                del self.diff_
+            if hasattr(self, 'norm_'):
+                del self.norm_
+
     # normalization
-    def fit(self,Xin):
+    def fit(self, Xin, y=None):
 
         # Check if already fitted
         if self._fitted:
-            print('Warning: The scaling class instance has already been fitted. The results will be overwritten.')
+            print('Warning: The scaling class instance has already been '+
+                  'fitted. The results will be overwritten.')
+            # Reset internal state before fitting
+            self._reset()
 
         if self.scaling is None:
             return
@@ -106,14 +120,16 @@ class scalingClass():
 
         self._fitted = True
 
-    def transform(self, Xin):
+    def transform(self, Xin, y=None):
 
         if self.scaling is None:
             return Xin
 
         # Check if already fitted
         if not self._fitted:
-            ValueError('The scaling class instance has not been fitted. Use the fit method before using the transofrm method.')
+            ValueError(
+                'The scaling class instance has not been fitted. Use the '+
+                'fit method before using the transofrm method.')
 
         # Check input
         X, isdataframe = self.check_input(Xin)
@@ -172,17 +188,14 @@ class scalingClass():
         return X
 
 
-    def fit_transform(self, Xin):
+    def fit_transform(self, Xin, y=None):
 
         if self.scaling is None:
             return Xin
 
         # Check if already fitted
-        if self._fitted:
-            print('Warning: The scaling class instance has already been fitted. The results will be overwritten.')
-        else:
-            self.fit(Xin)
-            self._fitted = True
+        self.fit(Xin)
+        self._fitted = True
 
         return self.transform(Xin)
 

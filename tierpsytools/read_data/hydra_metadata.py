@@ -131,8 +131,7 @@ def align_bluelight_conditions(
         feat, meta,
         how = 'outer',
         return_separate_feat_dfs = False,
-        bluelight_specific_meta_cols = ['imgstore_name',
-                                        'file_id', 'bluelight'],
+        bluelight_specific_meta_cols = ['imgstore_name', 'file_id', 'bluelight', 'n_skeletons'],
         merge_on_cols = ['date_yyyymmdd','imaging_plate_id','well_name']
         ):
     """
