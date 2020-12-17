@@ -33,7 +33,7 @@ def import_wells_annotations(annotations_file,
         DESCRIPTION. The default is ['/filenames_df',                                          '/wells_annotations_df'].
 
     imgstore_name: default is imgstore_prestim
-        
+
     Returns
     -------
     annotations : TYPE
@@ -48,9 +48,9 @@ def import_wells_annotations(annotations_file,
                                             'well_name']],
                                     on='file_id',
                                     right_index=True,
-                                    validate='one_to_many') 
+                                    validate='one_to_many')
     annotations_df['imgstore_prestim'] = annotations_df.filename.apply(
-                                        lambda x: x.split('/')[0])   
+                                        lambda x: x.split('/')[0])
     return annotations_df
 
 def import_wells_annoations_in_folder(aux_dir,
@@ -72,7 +72,7 @@ def import_wells_annoations_in_folder(aux_dir,
         DESCRIPTION.
 
     """
-    
+
     annotations_files = list(Path(aux_dir).rglob(search_string))
     annotations_df=[]
     for f in annotations_files:
@@ -81,7 +81,7 @@ def import_wells_annoations_in_folder(aux_dir,
     annotations_df.reset_index(drop=True,
                                inplace=True)
     return annotations_df
-    
+
 
 def match_rawvids_annotations(rawvid_dir,
                               annotations_df,
@@ -109,12 +109,12 @@ def match_rawvids_annotations(rawvid_dir,
 
     """
     matched_rawvids = match_bluelight_videos_in_folder(rawvid_dir)
-    
+
     matched_raw_annotations = matched_rawvids.merge(annotations_df,
                                                     how='outer',
                                                     on='imgstore_prestim',
                                                     validate='one_to_many')
-    
+
     matched_long = matched_raw_annotations.melt(id_vars=['well_name',
                                                          'well_label'],
                                                 value_vars=bluelight_names,
@@ -122,7 +122,7 @@ def match_rawvids_annotations(rawvid_dir,
     matched_long.drop(columns=['variable'],
                       inplace=True)
     matched_long['is_bad_well'] = matched_long['well_label'] != 1
-    
+
     return matched_long
 
 
@@ -137,7 +137,7 @@ def update_metadata(aux_dir, matched_long, saveto=None, del_if_exists=False):
     matched_long : TYPE
         DESCRIPTION.
     saveto: filename to save output
-    
+
     del_if_exists: Boolean to overwrite or not
 
     Returns
@@ -146,9 +146,9 @@ def update_metadata(aux_dir, matched_long, saveto=None, del_if_exists=False):
         DESCRIPTION.
 
     """
-    metadata_fname = list(Path(aux_dir.rglob('metadata.csv')))
-    
-    if len(metadata_fname>1):
+    metadata_fname = list(Path(aux_dir).rglob('metadata.csv'))
+
+    if len(metadata_fname)>1:
         warnings.warn('More than one metadata file in this directory: \n' +
                       '{} \n'.format(metadata_fname) +\
                           'aborting')
@@ -170,14 +170,14 @@ def update_metadata(aux_dir, matched_long, saveto=None, del_if_exists=False):
                           + 'recompile the day metadata, rename or delete the '
                           + 'exisiting file.')
             return None
-    
+
     #read metadata
     metadata = pd.read_csv(metadata_fname[0])
     if metadata['imgstore_name'].isna().sum() > 0:
         print('Nan values in imgstore names')
-        metadata = metadata[metadata['imgstore_name'].notna()]  
+        metadata = metadata[metadata['imgstore_name'].notna()]
     metadata.loc[:,'imgstore'] = metadata['imgstore_name'].apply(
-                                lambda x: x.split('/')[1])  
+                                lambda x: x.split('/')[1])
     #combine with annotations
     metadata_annotated = metadata.merge(matched_long,
                                  on=['imgstore',
@@ -188,25 +188,21 @@ def update_metadata(aux_dir, matched_long, saveto=None, del_if_exists=False):
     # drop unannotated wells
     metadata_annotated = metadata_annotated[metadata_annotated.well_label.notna()
                                       ].reset_index(drop=True)
-    
+
     metadata_annotated.to_csv(saveto,
                               index=False)
-    
+
     return metadata_annotated
 
 #%% examples of how to use
 if __name__=='__main__':
     PROJECT_DIR = Path('/Volumes/behavgenom$/Ida/Data/Hydra/DiseaseScreen')
-    
+
     wells_annotations_df = import_wells_annoations_in_folder(PROJECT_DIR / 'AuxiliaryFiles')
-    
+
     matched_videos_annoations = match_rawvids_annotations(PROJECT_DIR / 'RawVideos',
                                                           wells_annotations_df)
-    
+
     wells_annotated_metadata = update_metadata(PROJECT_DIR / 'AuxiliaryFiles',
                                                matched_videos_annoations,
                                                del_if_exists=True)
-    
-    
-
-
