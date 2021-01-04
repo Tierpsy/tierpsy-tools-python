@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+ATTENTION!
+This module will be deprecated in favor of the more generally
+applicable module tierpsytools.analysis.bagging_data
+
 Created on Wed Aug  5 12:55:52 2020
 
 @author: em812
@@ -12,6 +16,9 @@ import warnings
 import pdb
 
 def get_drug2moa_mapper(drug_id, moa_id):
+    """
+    Makes disctionary than maps drug names to their MOA
+    """
     drug_id = np.array(drug_id)
     moa_id = np.array(moa_id)
 
@@ -21,6 +28,21 @@ def get_drug2moa_mapper(drug_id, moa_id):
     return dict(zip(drugs, moas))
 
 def shuffle_data(df, arrays, random_state=None):
+    """
+    Apply the same random shuffling to a dataframe and a list of matching arrays
+
+    Parameters
+    ----------
+    df : the dataframe
+    arrays : list of arrays with size = number of rows of the df
+    random_state : random seed
+
+    Returns
+    -------
+    df : shuffled dataframe
+    arrays : shuffled arrays
+
+    """
     df = df.sample(frac=1, replace=False, random_state=random_state)
     for i,a in enumerate(arrays):
         if a is None:
@@ -32,11 +54,39 @@ def shuffle_data(df, arrays, random_state=None):
     return df, arrays
 
 class DrugDataBagging:
+    """
+    Create bags of drug data by sampling each dose of each drug.
+    """
     def __init__(self, n_bags=10, replace=True,
                n_per_dose=None, frac_per_dose=None,
                random_state=None, average_dose=False,
                average_func=np.nanmean,
                bluelight_conditions=True):
+        """
+        n_bags : int
+            number of bags to create
+        replace : bool
+            whether to sample with replacement
+        n_per_dose: int or None
+            number of samples per dose. If None, frac_per_dose must be defined.
+        n_frac_per_dose: int or None
+            fraction of dose datapoints to be samples. If None, n_per_dose
+            must be defined.
+        random_state : int
+            random seed
+        average_dose : bool
+            whether to average the dose samples in each bag
+        bluelight_conditions: bool or list of strings
+            If the samples are independent of bluelight conditions (bluelight
+            stimulus was not used or bluelight conditions are aligned), then
+            this parameter must be set to False.
+            If each sample has a bluelight label, then this parameter must be set
+            to True to sample from each bluelight condition uniformly.
+            If True, it is assumed that there are three bluelight labels:
+            ['prestim', 'poststim', 'bluelight']. If different labels were used
+            or you want to consider a subset of the three conditions, then you
+            can give a custom list of bluelight labels.
+        """
         self.n_bags = n_bags
         self.replace = replace
 
@@ -106,10 +156,35 @@ class DrugDataBagging:
 
 
     def fit(self, X, drug, dose, bluelight=None, shuffle=False):
+        """
+        Sample the bags from a dataset that contains multiple drugs at multiple doses.
+
+        Parameters
+        ----------
+        X : dataframe or array
+            The tierpsy features per sample.
+        drug : array-like
+            The drug name for each sample in X
+        dose : array-like
+            The drug dose for each sample in X
+        bluelight : array-like, optional
+            The bluelight label for each sample in X. The default is None.
+        shuffle : bool, optional
+            Whether to shuffle the sampled points in each bag.
+            The default is False.
+
+        Returns
+        -------
+        None.
+
+        """
 
         if not isinstance(X, pd.DataFrame):
             X = pd.DataFrame(X)
+        drug = np.array(drug)
         dose = np.array(dose)
+        if bluelight is not None:
+            bluelight = np.array(bluelight)
 
         self.drug_names = np.unique(drug)
 
@@ -142,6 +217,27 @@ class DrugDataBagging:
 
 
     def fit_transform(self, X, drug, dose, bluelight=None, shuffle=False):
+        """
+        Sample the bags from a dataset that contains multiple drugs at multiple doses
+        and return them.
+
+        Parameters
+        ----------
+        Same as fit()
+
+        Raises
+        ------
+        ValueError
+            If the instance has already been fitted.
+
+        Returns
+        -------
+        list of arrays or dataframes
+            The list of bags (sampled data).
+        meta : list of dataframes
+            The metadata for each bag
+
+        """
         if hasattr(self, 'Xbags'):
             raise ValueError('DrugBagging instsnce already fitted.')
 
@@ -159,6 +255,7 @@ class DrugDataBagging:
 
         return self.Xbags, meta
 
+#%%
 class SingleDrugBagging(DrugDataBagging):
     def __init__(self, n_bags=10, replace=True,
                n_per_dose=None, frac_per_dose=None,
@@ -187,11 +284,14 @@ class SingleDrugBagging(DrugDataBagging):
         else:
             return self.Xbags, self.dose_bags, self.blue_bags
 
-
+#%%
 class DrugDataBaggingByMOA(DrugDataBagging):
+    """
+    Get averaged dose samples from a drug screening dataset balancing the
+    number of samples per class.
+    """
     def __init__(self, multiplier=1, replace=True, n_per_dose=None, frac_per_dose=None,
-               random_state=None, average_dose=False,
-               bluelight_conditions=True):
+               random_state=None, bluelight_conditions=True):
 
         self.multiplier = multiplier
         self.replace = replace
@@ -206,7 +306,7 @@ class DrugDataBaggingByMOA(DrugDataBagging):
         self.n = n_per_dose
         self.frac = frac_per_dose
         self.random_state = random_state
-        self.average_dose = average_dose
+
         super()._parse_bluelight_conditions(bluelight_conditions)
 
     def fit(self, X, moa, drug, dose, bluelight=None, shuffle=False):
@@ -227,7 +327,7 @@ class DrugDataBaggingByMOA(DrugDataBagging):
 
             bagger = DrugDataBagging(
                 n_bags=n_bags, replace=self.replace, frac_per_dose=self.frac,
-                random_state=self.random_state, average_dose=self.average_dose,
+                random_state=self.random_state, average_dose=True,
                 bluelight_conditions=self.bluelight)
 
             if bluelight is None:
@@ -391,6 +491,8 @@ class StrainAugmentDrugData:
                 return self.Xbags[0], self.drug_bags[0], self.dose_bags[0], self.bluelight_bags[0]
             else:
                 return self.Xbags, self.drug_bags, self.dose_bags, self.bluelight_bags
+
+
 #%%
 if __name__=="__main__":
     import matplotlib.pyplot as plt

@@ -203,12 +203,12 @@ def populate_96WPs(worm_sorter,
                    del_if_exists=False
                    ):
     """
-    @author: ilbarlow   
+    @author: ilbarlow
 
     Function to explode and make dataframes/csvs from wormsorter input files.
     Works with plates that have been filled row-wise and column-wise
     consecutively
-    
+
     Parameters
     ----------
     worm_sorter : .csv file with headers 'start_well', 'end_well' and details
@@ -223,7 +223,7 @@ def populate_96WPs(worm_sorter,
     plate_metadata: one line per well; can be used in get_day_metadata
             function to compile with manual metadata
 
-    
+
     """
     import string
 
@@ -238,18 +238,18 @@ def populate_96WPs(worm_sorter,
     total_nwells = len(well_names)
 
     print('Total number of wells: {}'.format(total_nwells))
-    
+
     # checking if and where to save the file
     if saveto == None:
         print ('plate metadata file will not be saved')
-    
+
     else:
         try:
-            Path(saveto).touch()           
+            Path(saveto).touch()
         except FileNotFoundError:
             print ('saveto file invalid, saving to default filename')
             saveto = 'default'
-        
+
         if saveto == 'default':
             saveto = Path(worm_sorter).parent / ('{}_plate_metadata.csv'.format(DATE))
             print ('saving to {}'.format(saveto))
@@ -264,45 +264,45 @@ def populate_96WPs(worm_sorter,
                           + 'recompile the wormsorter metadata, rename or delete the '
                           + 'exisiting file.')
             return None
-    
+
     # import worm_sorter metadata and find the start and end rows and columns
     worm_sorter_df = pd.read_csv(worm_sorter)
     worm_sorter_df['start_row'] = row_from_well(worm_sorter_df.start_well)
     worm_sorter_df['end_row'] = row_from_well(worm_sorter_df.end_well)
     worm_sorter_df['row_range'] = [[chr(c) for c in np.arange(ord(r.start_row),
-                                                              ord(r.end_row)+1)] 
-                                   for i, r in worm_sorter_df.iterrows()]   
+                                                              ord(r.end_row)+1)]
+                                   for i, r in worm_sorter_df.iterrows()]
     worm_sorter_df['start_column'] = column_from_well(worm_sorter_df.start_well)
     worm_sorter_df['end_column'] = column_from_well(worm_sorter_df.end_well)
     worm_sorter_df['column_range'] = [list(np.arange(r.start_column,
                                                  r.end_column+1))
                                       for i, r in worm_sorter_df.iterrows()]
-    
+
     worm_sorter_df['well_name'] = [[i+str(b) for i in r.row_range
                                     for b in r.column_range]
                                 for i, r in worm_sorter_df.iterrows()]
-    
+
     plate_metadata = explode_df(worm_sorter_df, 'well_name')
-    
+
     # do check to make sure there aren't multiple  plates
     plate_errors =  []
-    unique_plates = plate_metadata['imaging_plate_id'].unique()    
+    unique_plates = plate_metadata['imaging_plate_id'].unique()
     for plate in unique_plates:
         if plate_metadata[plate_metadata['imaging_plate_id'] == plate].shape[0] > total_nwells:
-            warnings.warn('{}: more than {} wells'.format(plate, total_nwells))            
+            warnings.warn('{}: more than {} wells'.format(plate, total_nwells))
             plate_errors.append(plate)
             with open(wormsorter_log_fname, 'a') as fid:
-                fid.write(plate + '\n')  
+                fid.write(plate + '\n')
     if len(plate_errors) == 0:
         with open(wormsorter_log_fname, 'a') as fid:
             fid.write ('No wormsorter plate errors \n')
-    
+
     cols_to_keep = ['hydra_number', 'imaging_plate_id', 'imaging_run',
                     'well_name', 'worm_strain', 'worm_code', 'worm_gene',
                     'bacteria_strain', 'start_well','end_well',
                     'cave_humidity_percent', 'cave_temp_oC', 'cave_time',
                     'comments', 'date_bleached_yyyymmdd', 'days_in_diapause',
-                    'media_type', 'date_plates_poured_yyyymmdd', 
+                    'media_type', 'date_plates_poured_yyyymmdd',
                     'date_refed_yyyymmdd','number_worms_per_well',
                     'recording_time']
     plate_metadata = plate_metadata.reindex(columns=cols_to_keep)
@@ -847,11 +847,11 @@ def number_wells_per_plate(day_metadata, day_root_dir):
     .csv and dataframe of plate summary
 
     """
-    
+
     saveto = day_root_dir / '{}_wells_per_plate.csv'.format(day_root_dir.stem)
-    
+
     imaging_plates = day_metadata['imaging_plate_id'].unique()
-    
+
     plate_summary_df = []
     for plate in imaging_plates:
         plate_summary_df.append(pd.DataFrame().from_dict(
@@ -860,10 +860,10 @@ def number_wells_per_plate(day_metadata, day_root_dir):
                  'imaging_plate_id'] == plate]['well_name'].unique()],
              'number_wells': day_metadata[day_metadata[
                  'imaging_plate_id'] == plate]['well_name'].unique().shape[0]}))
-    
+
     plate_summary_df = pd.concat(plate_summary_df)
     plate_summary_df.to_csv(saveto, index=False)
-    
+
     return plate_summary_df
 
 
@@ -890,14 +890,16 @@ def concatenate_days_metadata(
     return:
         None
     """
+
+    date_regex = r"\d{8}"
     aux_root_dir = Path(aux_root_dir)
 
     if saveto is None:
         saveto = aux_root_dir.joinpath('metadata.csv')
 
     if list_days is None:
-        list_days = [d for d in aux_root_dir.glob("*") if d.is_dir()]
-
+        list_days = [d for d in aux_root_dir.glob("*") if d.is_dir()
+                    and re.search(date_regex, str(d)) is not None]
 
     ## Compile all metadata from different days
     meta_files = []
@@ -1000,7 +1002,7 @@ if __name__ == '__main__':
 
     #%% Example 4: syngenta screen  - use a copy of day of metadata from behavgenom
     from tierpsytools import EXAMPLES_DIR
-    
+
     day_root_dir = EXMAPLES_DIR / Path('hydra_metadata/data/AuxiliaryFiles/20191213')
     sourceplate_file = day_root_dir / '20191212_sourceplates.csv'
     wormsorter_file = day_root_dir / '20191213_wormsorter.csv'
@@ -1042,10 +1044,10 @@ if __name__ == '__main__':
                                            robot_metadata.iterrows()]
     robot_metadata.to_csv(str(sourceplate_file).replace('.csv', '_shuffled.csv'),
                           index=False)
-    
-    # %% Example 6: with Syngenta 12 strain screen   
+
+    # %% Example 6: with Syngenta 12 strain screen
     from tierpsytools import EXAMPLES_DIR
-    
+
     day_root_dir = EXAMPLES_DIR / Path('hydra_metadata/data/AuxiliaryFiles/20200220')
     manual_meta_file = day_root_dir / '20200220_manual_metadata.csv'
     wormsorter_file = day_root_dir / '20200220_wormsorter.csv'
@@ -1063,7 +1065,7 @@ if __name__ == '__main__':
     plate_metadata = populate_96WPs(wormsorter_file,
                                     del_if_exists=True,
                                     saveto='default')
-    
+
     bad_wells_df = convert_bad_wells_lut(bad_wells_file)
     plate_metadata = pd.merge(plate_metadata,
                               bad_wells_df,
@@ -1103,4 +1105,3 @@ if __name__ == '__main__':
                                         plate_size=48) # set to 48 as some half plates
     number_wells_per_plate(day_metadata,
                            day_root_dir)
-    

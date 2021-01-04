@@ -8,7 +8,7 @@ Created on Fri May  8 18:01:33 2020
 import numpy as np
 import pandas as pd
 from tierpsytools.analysis.classification_tools import cv_predict
-from tierpsytools.feature_processing.scaling_class import scalingClass
+from tierpsytools.preprocessing.scaling_class import scalingClass
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import normalize
 from joblib import Parallel, delayed
@@ -26,27 +26,6 @@ def _get_y_group(y, group):
     y_group = y_group.apply(lambda x:x[0])
 
     return y_group
-
-def get_two_most_likely_accuracy(ytest, ytest_pred_two):
-
-    check=[]
-    for i,y in enumerate(ytest):
-        if y in ytest_pred_two[i]:
-            check.append(True)
-    acc = np.sum(check)/len(check)
-    return acc
-
-def get_two_most_likely(Xtest, estimator):
-
-    ytest_pred_two = np.empty([Xtest.shape[0],2])
-
-    ytest_pred_proba = estimator.predict_proba(Xtest)
-    indx = np.flip(np.argsort(ytest_pred_proba,axis=1),axis=1)
-    classes = estimator.classes_
-    for cmpd in range(Xtest.shape[0]):
-        ytest_pred_two[cmpd] = classes[indx[cmpd]][0:2]
-
-    return ytest_pred_two
 
 def get_seen_compounds(Xtest, ytest, ytrain):
     """
@@ -129,7 +108,7 @@ def majority_vote_CV_parallel(
     y = np.array(y)
     group = np.array(group)
 
-    parallel = Parallel(n_jobs=-1, verbose=True)
+    parallel = Parallel(n_jobs=n_jobs, verbose=True)
     func = delayed(_one_fit)
 
     scores = parallel(
@@ -322,8 +301,8 @@ def score_majority_vote(
 
     return score_func(y_group, y_maj)
 
-
-def get_two_most_likely_majority_vote(y_pred,groups):
+#%%
+def get_two_most_likely_majority_vote(y_pred, group):
     """
     Estimate the classification accuracy when groups of data points are classified together based on a majority vote.
     param:
@@ -331,23 +310,35 @@ def get_two_most_likely_majority_vote(y_pred,groups):
         y_pred: the predicted class labels from the classfier (array size n_samples)
         groups: an array defining the groups of data points (array size n_samples)
     """
+    groups = np.unique(group)
 
-    y_maj = np.empty((y_pred.shape[0],2))
+    y_maj = np.empty((groups.shape[0],2))
 
-    for grp in np.unique(groups):
+    for ig,grp in enumerate(groups):
 
-        c = Counter(y_pred[groups==grp])
+        c = Counter(y_pred[group==grp])
 
         if len(c.most_common())>1:
             for rnk in [0,1]:
                 value,count = c.most_common()[rnk]
-                y_maj[groups==grp,rnk] = value
+                y_maj[ig,rnk] = value
         else:
             value,count = c.most_common()[0]
-            y_maj[groups==grp,:] = [value,value]
+            y_maj[ig,:] = [value]*2
 
-        # if more than one labels have the same number of votes
-        if len(c.most_common())>1 and c.most_common()[0][1]==c.most_common()[1][1]:
-            print('Warning: the samples of compound {} are classified in more than one classes with the same frequency.'.format(grp))
+    return dict(zip(groups, y_maj))
 
-    return y_maj
+def score_two_most_likely(y_true, y_pred, group):
+
+    y_maj_true = _get_y_group(y_true, group)
+    y_maj_pred = get_two_most_likely_majority_vote(y_pred, group)
+
+    check=[]
+    for grp in y_maj_true.index:
+        if y_maj_true[grp] in y_maj_pred[grp]:
+            check.append(True)
+        else:
+            check.append(False)
+    acc = np.sum(check)/len(check)
+
+    return acc

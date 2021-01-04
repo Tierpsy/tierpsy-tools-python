@@ -69,9 +69,9 @@ def read_hydra_metadata(
     add_bluelight : bool, optional
         Add a metadata column that specifies the bluelight condition for each row.
         The default is True.
-    bluelight_label_location_in_imgstore_stem : int, optional
-        Where to file the bluelight specification in the imgstore name.
-        The default is 3.
+    bluelight_labels : list, optional
+        The names of the bluelight conditions as they appear in the file names.
+        Only used if add_bluelight is True.
 
     Returns
     -------
@@ -131,8 +131,7 @@ def align_bluelight_conditions(
         feat, meta,
         how = 'outer',
         return_separate_feat_dfs = False,
-        bluelight_specific_meta_cols = ['imgstore_name',
-                                        'file_id', 'bluelight'],
+        bluelight_specific_meta_cols = ['imgstore_name', 'file_id', 'bluelight', 'n_skeletons'],
         merge_on_cols = ['date_yyyymmdd','imaging_plate_id','well_name']
         ):
     """
@@ -194,10 +193,14 @@ def align_bluelight_conditions(
     feat = feat.set_index(merge_on_cols)
 
     feat = feat[feat['bluelight']=='prestim'].join(
-        feat[feat['bluelight']=='bluelight'],
-        how=how, lsuffix='', rsuffix='_bluelight').join(
-        feat[feat['bluelight']=='poststim'],
-        how=how, lsuffix='', rsuffix='_poststim')
+            feat[feat['bluelight']=='bluelight'],
+            how=how,
+            lsuffix='',
+            rsuffix='_bluelight').join(
+                feat[feat['bluelight']=='poststim'],
+                how=how,
+                lsuffix='',
+                rsuffix='_poststim')
 
     # Add the prestim suffix to the bluelight-specific columns
     feat = feat.rename(

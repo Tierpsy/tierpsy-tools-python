@@ -6,7 +6,7 @@ Created on Wed Jul 15 17:15:37 2020
 @author: em812
 """
 from sklearn.metrics import *
-from tierpsytools.analysis.drug_screenings.MIL.majority_vote import \
+from tierpsytools.drug_screenings.MIL.majority_vote import \
     _get_y_group, get_majority_vote, get_sum_of_votes
 from tierpsytools.analysis.helper import _get_pred_from_probas
 import pandas as pd
