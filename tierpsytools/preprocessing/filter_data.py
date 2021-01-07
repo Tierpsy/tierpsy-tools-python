@@ -172,11 +172,14 @@ def cap_feat_values(feat, cutoff=1e15, remove_all_nan=True):
 
     drop_cols = []
     for col in feat.columns:
-        if np.all(feat[col].values>cutoff):
+        mask = ~feat[col].isna()
+        ft = feat.loc[mask, col]
+        if (ft>cutoff).all():
             drop_cols.append(col)
         else:
-            maxvalid = feat.loc[feat[col]<1e15,col].max()
-            feat.loc[feat[col]>1e15,col] = maxvalid
+            maxvalid = ft[ft<=cutoff].max()
+            ft[ft>cutoff] = maxvalid
+            feat.loc[mask, col] = ft
 
     if remove_all_nan:
         feat = feat.drop(columns=drop_cols)
