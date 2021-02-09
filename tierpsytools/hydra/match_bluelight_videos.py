@@ -59,16 +59,16 @@ def check_time_differences(df, tol=3):
     ind_dodgy = []
     if diff1.max() > diff1.mean() + tol/2:
         ind_dodgy.extend(
-            (diff1 > diff1.mean() + tol/2).to_numpy().nonzeros()[0])
+            (diff1 > diff1.mean() + tol/2).to_numpy().nonzero()[0]) #nonzeros
     if diff1.min() < diff1.mean() - tol/2:
         ind_dodgy.extend(
-            (diff1 < diff1.mean() - tol/2).to_numpy().nonzeros()[0])
+            (diff1 < diff1.mean() - tol/2).to_numpy().nonzero()[0])
     if diff2.max() > diff2.mean() + tol/2:
         ind_dodgy.extend(
-            (diff2 > diff2.mean() + tol/2).to_numpy().nonzeros()[0])
+            (diff2 > diff2.mean() + tol/2).to_numpy().nonzero()[0])
     if diff2.min() < diff2.mean() - tol/2:
         ind_dodgy.extend(
-            (diff2 > diff2.mean() - tol/2).to_numpy().nonzeros()[0])
+            (diff2 > diff2.mean() - tol/2).to_numpy().nonzero()[0])
     dodgy = df.loc[diff2.idxmin(), imgstore_cols]
     print('Double-check matching of {}'.format(dodgy))
 
