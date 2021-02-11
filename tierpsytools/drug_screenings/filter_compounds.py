@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pdb
 import warnings
-
+from tierpsytools.analysis.statistical_tests import _multitest_correct
 
 def remove_MOAs_based_on_drug_count(
         feat, meta,
@@ -73,10 +73,10 @@ def compare_drug_to_control_univariate(
         fdr=0.05, multitest_method='fdr_by', n_jobs=-1,
         ):
     from tierpsytools.drug_screenings.filter_compounds_helper import \
-        _low_effect_univariate, _low_effect_LMM, _multitest_correct
+        _low_effect_univariate, _low_effect_LMM
 
     # Check input
-    if any([test.startswith(t) for t in ['ANOVA', 'Kruskal','Wilcoxon']]):
+    if any([test.startswith(t) for t in ['ANOVA', 't-test', 'Kruskal','Wilcoxon']]):
         if comparison_type is None:
             raise ValueError('Must define the coparison_type for the '+
                              'univariate {} tests.'.format(test))
@@ -95,7 +95,18 @@ def compare_drug_to_control_univariate(
             fdr=fdr, multitest_method=multitest_method,
             comparison_type=comparison_type, n_jobs=n_jobs)
 
-    return _multitest_correct(pvals, multitest_method, fdr)
+    else:
+        raise ValueError('Test type not recognised.')
+
+    reject, pvals = _multitest_correct(pvals, multitest_method, fdr)
+
+    # When doses were tested separately, keep only the min pvalue and a
+    # unique reject flag for each feature
+    if len(pvals.shape) == 2:
+        reject = pd.Series(np.any(reject.reshape(pvals.shape), axis=1), index=pvals.index)
+        pvals = pd.Series(np.min(pvals.reshape(pvals.shape), axis=1), index=pvals.index)
+
+    return reject, pvals
 
 
 def compounds_with_low_effect_univariate(
@@ -135,19 +146,27 @@ def compounds_with_low_effect_univariate(
         ignored.
     control : str
         the name of the control samples in the drug_name array
-    test : str, options: ['ANOVA', 'Kruskal_Wallis', 'Wilkoxon_Rank_Sum', 'LMM']
+    match_control_by : array-like, shape=(n_samples), optional. Default is None.
+        If this variable is defined, then the samples are compared only with
+        the control points that have the same value for this variable.
+        For example, if match_control_by is the day of the experiment, we
+        compare the drug samples with the control points from the same day of
+        experiment.
+    test : str, options: ['ANOVA', 't-test', 'Kruskal_Wallis', 'Wilkoxon_Rank_Sum', 'LMM']
         The type of statistical test to perform for each feature.
     comparison_type : str, options: ['multiclass', 'binary_each_dose']
         defines the groups seen in the statistical test.
-        If 'multiclass', then the controls and each drug dose are all
+        - If 'multiclass', then the controls and each drug dose are all
         considered separate groups.
-        If 'binary_each_dose', then separate tests are performed for each
+        - If 'binary_each_dose', then separate tests are performed for each
         dose in every feature. Each test compares one dose to the controls.
         If any of the tests reaches the significance thresshold (after
         correction for multiple comparisons), then the feature is
         considered significant.
-    multitest_method : string
+        * When only one dose was tested per compound, then this parameter can take any value.
+    multitest_method : string or None
         The method to use in statsmodels.statis.multitest.multipletests function.
+        If None, no correction is done.
     fdr : float < 1.0 and > 0.0
         false discovery rate
     ignore_names : list or None, optional

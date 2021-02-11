@@ -225,7 +225,8 @@ def rearrange_confusion_matrix(cm, n_clusters):
 
 def plot_confusion_matrix(
         y_true, y_pred, classes=None, normalize=False, title=None, figsize=(8,8),
-        cmap=None, saveto=None, cluster=False, n_clusters=3, add_colorbar=False
+        cmap=None, saveto=None, cluster=False, n_clusters=3, add_colorbar=False,
+        show_labels=True, show_counts=True
         ):
     """
     This function prints and plots the confusion matrix.
@@ -279,27 +280,29 @@ def plot_confusion_matrix(
         cax = divider.append_axes("right", size="5%", pad=0.05)
         ax.figure.colorbar(im, cax=cax)
 
-    # We want to show all ticks...
-    ax.set(xticks=np.arange(cm.shape[1]),
-           yticks=np.arange(cm.shape[0]),
-           # ... and label them with the respective list entries
-           xticklabels=classes, yticklabels=classes,
-           title=title,
-           ylabel='True label',
-           xlabel='Predicted label')
+    if show_labels:
+        # We want to show all ticks...
+        ax.set(xticks=np.arange(cm.shape[1]),
+               yticks=np.arange(cm.shape[0]),
+               # ... and label them with the respective list entries
+               xticklabels=classes, yticklabels=classes,
+               title=title,
+               ylabel='True label',
+               xlabel='Predicted label')
 
-    # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
-             rotation_mode="anchor")
+        # Rotate the tick labels and set their alignment.
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+                 rotation_mode="anchor")
 
-    # Loop over data dimensions and create text annotations.
-    fmt = '.2f' if normalize else 'd'
-    thresh = cm.max() / 2.
-    for i in range(cm.shape[0]):
-        for j in range(cm.shape[1]):
-            ax.text(j, i, format(cm[i, j], fmt),
-                    ha="center", va="center",
-                    color="white" if cm[i, j] > thresh else "black")
+    if show_counts:
+        # Loop over data dimensions and create text annotations.
+        fmt = '.2f' if normalize else 'd'
+        thresh = cm.max() / 2.
+        for i in range(cm.shape[0]):
+            for j in range(cm.shape[1]):
+                ax.text(j, i, format(cm[i, j], fmt),
+                        ha="center", va="center",
+                        color="white" if cm[i, j] > thresh else "black")
     fig.tight_layout()
 
     if saveto is not None:

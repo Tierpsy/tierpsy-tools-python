@@ -9,6 +9,62 @@ import warnings
 import numpy as np
 import pandas as pd
 
+def filter_n_skeletons(feat, meta, min_nskel_per_video=None, min_nskel_sum=None,
+                       verbose=True):
+    """
+    Filter samples based on number of skeletons in the video.
+
+    Parameters
+    ----------
+    feat : dataframe shape=(n_samples, n_features)
+        features dataframe
+    meta : dataframe shape=(n_samples, n_metadata_columns)
+        metadata dataframe.
+        Must contain 'n_skeletons' column if align_bluelight=False.
+        Must contain 'n_skeletons_prestim', 'n_skeletons_bluelight' and
+        'n_skeletons_poststim' columns if align_bluelight=True.
+    min_nskel_per_video : int or None
+        Minimum number of skeletons for each video to keep the sample.
+        This means that if the sample contains info from many videos,
+        every one of these videos needs to have at least this number of skeletons
+        for the sample to be kept.
+        If None, then  min_nskel_sum must be defined.
+    min_nskel_sum: int or None
+        Minimum total number of skeletons to keep the sample.
+        This means that if the sample contains info from many videos,
+        the sum of the number of skeletons from all the videos needs to be at
+        least this number for the sample to be kept.
+        If None, then  min_nskel_per_video must be defined.
+    align_bluelight : bool, optional
+        Whether the bluelight conditions are aligned in the feat, meta dataframes.
+        The default is False.
+
+    Returns
+    -------
+    feat : filtered dataframe
+    meta : filtered metadata
+
+    """
+    if min_nskel_per_video is None and min_nskel_sum is None:
+        raise ValueError('You must define at least one of the min_nskel_* parameters.')
+
+    n_samples = feat.shape[0]
+
+    skel_cols = [col for col in meta.columns if col.startswith('n_skeletons')]
+
+    if min_nskel_per_video is not None:
+        mask = (meta[skel_cols]>=min_nskel_per_video).all(axis=1)
+        feat = feat[mask]
+        meta = meta[mask]
+    if min_nskel_sum is not None:
+        mask = meta[skel_cols].sum(axis=1)>=min_nskel_sum
+        feat = feat[mask]
+        meta = meta[mask]
+
+    if verbose:
+        print('{} samples dropped based on n_skeletons.'.format(n_samples-feat.shape[0]))
+    return feat, meta
+
 def drop_ventrally_signed(feat):
     """
     Drop features that are ventrally signed.
@@ -128,7 +184,7 @@ def select_feat_set(
     return features[ft_set]
 
 
-def filter_nan_inf(feat, threshold, axis):
+def filter_nan_inf(feat, threshold, axis, verbose=True):
     """
     FILTER_NAN_INF: function to remove features or samples based on the
     ratio of NaN+Inf values.
@@ -141,6 +197,8 @@ def filter_nan_inf(feat, threshold, axis):
     """
     import numpy as np
 
+    sn = [(feat.shape[0], 'samples'), (feat.shape[1], 'features')]
+
     nanRatio = np.sum(np.logical_or(np.isnan(feat), np.isinf(feat)),
                       axis=axis) / np.size(feat, axis=axis)
     if axis==0:
@@ -148,6 +206,10 @@ def filter_nan_inf(feat, threshold, axis):
     else:
         feat = feat.loc[nanRatio<threshold,:]
 
+    sn = [(s-feat.shape[i],n) for i,(s,n) in enumerate(sn)]
+
+    if verbose:
+        print('{} {} dropped.'.format(*sn[1-axis]))
     return feat
 
 
@@ -521,52 +583,4 @@ def average_by_groups(
     feat = feat.reset_index(drop=True)
 
     return feat, meta
-
-
-def encode_categorical_variable(feat, variable, base_name=None, encoder=None):
-    """
-    Encode a categorical variable and add it to the features dataframe.
-
-    Parameters
-    ----------
-    feat : pandas dataframe
-       Features matrix (rows = samples, columns = features)
-    variable : array, list or pandas series
-        The categorical variable to encode. Must have the same length as the
-        number of rows in the feat dataframe.
-    base_name : str, optional. The default is None.
-        If defined, it will be used to name the encoded features.
-    encoder : encoder instance, optional. The default is None.
-        An encoder class instance, with the sklearn format (must have a fit_transform method).
-        If None, then the OneHotEncoder of sklearn will be used.
-
-    Returns
-    -------
-    feat : pandas dataframe
-        features matrix including the encoded features.
-
-    """
-
-    from sklearn.preprocessing import OneHotEncoder
-
-    if encoder is None:
-        encoder = OneHotEncoder(sparse=False)
-    if isinstance(variable, pd.Series):
-        if base_name is None:
-            base_name = variable.name
-        variable = variable.values
-
-    encoded_ft = encoder.fit_transform(variable.reshape(-1,1))
-    if len(encoded_ft.shape)==1:
-        if base_name is None:
-            base_name = 'encoded_feature'
-        feat.insert(0, base_name, encoded_ft)
-    else:
-        if base_name is None:
-            names = encoder.categories_[0]
-        else:
-            names = ['_'.join([base_name, ctg]) for ctg in encoder.categories_[0]]
-        for col, names in enumerate(names):
-            feat.insert(0, names, encoded_ft[:, col])
-    return feat
 

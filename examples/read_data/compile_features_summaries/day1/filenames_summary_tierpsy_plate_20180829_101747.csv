@@ -1,9 +1,0 @@
-# comment line 1,,,
-# comment line 2,,,
-# comment line 3,,,
-file_id,file_name,is_good,precipitation
-0,/Volumes/behavgenom$/Eleni/pesticides/Results-new_features/Syngenta_Agar_Screening_001_140717/N2_worms10_CSAA016712_100_Set4_Pos5_Ch1_14072017_190604_featuresN.hdf5,TRUE,FALSE
-1,/Volumes/behavgenom$/Eleni/pesticides/Results-new_features/Syngenta_Agar_Screening_001_140717/N2_worms10_CSAA016712_100_Set4_Pos5_Ch2_14072017_190604_featuresN.hdf5,TRUE,FALSE
-2,/Volumes/behavgenom$/Eleni/pesticides/Results-new_features/Syngenta_Agar_Screening_001_140717/N2_worms10_CSAA016712_100_Set4_Pos5_Ch3_14072017_190609_featuresN.hdf5,TRUE,FALSE
-3,/Volumes/behavgenom$/Eleni/pesticides/Results-new_features/Syngenta_Agar_Screening_001_140717/N2_worms10_CSAA016712_10_Set3_Pos4_Ch5_14072017_184854_featuresN.hdf5,FALSE,FALSE
-4,/Volumes/behavgenom$/Eleni/pesticides/Results-new_features/Syngenta_Agar_Screening_001_140717/N2_worms10_CSAA016712_10_Set3_Pos4_Ch5_14072017_184854_featuresN.hdf5,TRUE,FALSE

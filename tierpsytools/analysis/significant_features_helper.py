@@ -147,3 +147,4 @@ def get_relevance(feat, y_class, relevance_func='mutual_info'):
             relevance[i] = relevance_func(feat[:,i], y_class)
 
     return relevance
+
