@@ -10,7 +10,9 @@ setup(
         "console_scripts": [
                 "hydra_sensordata_report=" \
                 + "tierpsytools.hydra.read_imgstore_extradata:" \
-                + "hydra_sensordata_report"
+                + "hydra_sensordata_report",
+                "platechecker=" \
+                + "tierpsytools.hydra.platechecker:platechecker"
         ]
     },
 )

@@ -60,6 +60,7 @@ class DrugDataBagging:
     def __init__(self, n_bags=10, replace=True,
                n_per_dose=None, frac_per_dose=None,
                random_state=None, average_dose=False,
+               average_func=np.nanmean,
                bluelight_conditions=True):
         """
         n_bags : int
@@ -100,6 +101,7 @@ class DrugDataBagging:
         self.frac = frac_per_dose
         self.random_state = random_state
         self.average_dose = average_dose
+        self.average_func = average_func
         self._parse_bluelight_conditions(bluelight_conditions)
 
     def _parse_bluelight_conditions(self, bluelight_conditions):
@@ -138,9 +140,9 @@ class DrugDataBagging:
 
         if self.average_dose:
             if self.bluelight is None:
-                Xbag = Xbag.groupby(by=[drug_bag, dose_bag]).agg(np.nanmean)
+                Xbag = Xbag.groupby(by=[drug_bag, dose_bag]).agg(self.average_func)
             else:
-                Xbag = Xbag.groupby(by=[drug_bag, dose_bag, blue_bag]).agg(np.nanmean)
+                Xbag = Xbag.groupby(by=[drug_bag, dose_bag, blue_bag]).agg(self.average_func)
                 blue_bag = Xbag.index.get_level_values(2).to_numpy()
             drug_bag = Xbag.index.get_level_values(0).to_numpy()
             dose_bag = Xbag.index.get_level_values(1).to_numpy()
