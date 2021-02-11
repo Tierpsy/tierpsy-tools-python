@@ -2,5 +2,6 @@
 *.profraw
 *.o
 *.DS_Store
-tierpsytools.egg-info/
+.vscode/
+*.egg-info/
 todo.txt

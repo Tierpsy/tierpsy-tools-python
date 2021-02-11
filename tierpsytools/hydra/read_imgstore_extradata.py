@@ -42,7 +42,7 @@ class ExtraDataReader(object):
         except:
             self.store = None
         self.filename = filename
-        print(self.filename)
+        # print(self.filename)
         self.ext = '.extra_data.json'
         self.extra_data = None
 
@@ -50,7 +50,7 @@ class ExtraDataReader(object):
         """Only called by the __init__"""
         if self.store is None:
             extra_data_fnames = list(self.filename.parent.glob('*' + self.ext))
-            print(extra_data_fnames)
+            # print(extra_data_fnames)
         else:
             extra_data_fnames = [chunk+self.ext
                                  for (_, chunk)
