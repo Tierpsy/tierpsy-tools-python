@@ -52,8 +52,17 @@ def _low_effect_univariate(
         DESCRIPTION.
 
     """
-    from scipy.stats import kruskal, ranksums, f_oneway
+    from scipy.stats import kruskal, ranksums, f_oneway, ttest_ind
     from functools import partial
+
+    if comparison_type=='multiclass' and np.unique(drug_dose).shape[0]>2:
+        if test.startswith('Wilkoxon') or test == 't-test':
+            raise ValueError(
+                """
+            The Wilkoxon rank sum test cannot be used to compare between
+            more than two groups. Use a different test or the
+            binary_each_dose comparison_method instead.
+                """)
 
     if not isinstance(X, pd.DataFrame):
         X = pd.DataFrame(X)
@@ -64,18 +73,25 @@ def _low_effect_univariate(
 
         def _one_fit(ift, samples, **kwargs):
             samples = [s[~np.isnan(s)] for s in samples if not all(np.isnan(s))]
-            if len(samples)<2:
-                return ift, (np.nan, np.nan)
-            return ift, test(*samples, **kwargs)
+            try:
+                rp = test(*samples, **kwargs)
+            except Exception as err:
+                print(err)
+                rp = (np.nan, np.nan)
+            return ift, rp
 
         parallel = Parallel(n_jobs=n_jobs, verbose=True)
         func = delayed(_one_fit)
 
-        res = parallel(
-            func(ift, [sample[:,ift]
-                  for sample in [np.array(X[y==iy]) for iy in np.unique(y)]],
-                 **kwargs)
-            for ift in range(X.shape[1]))
+        try:
+            res = parallel(
+                func(ift, [sample[:,ift]
+                      for sample in [np.array(X[y==iy]) for iy in np.unique(y)]],
+                     **kwargs)
+                for ift in range(X.shape[1]))
+        except Exception as err:
+            print(err)
+            pdb.set_trace()
 
         order = [ift for ift,(r,p) in res]
         rs = np.array([r for ift,(r,p) in res])
@@ -89,11 +105,9 @@ def _low_effect_univariate(
     elif test.startswith('Kruskal'):
         func = partial(stats_test, test=kruskal, nan_policy='raise')
     elif test.startswith('Wilkoxon'):
-        if comparison_type=='multiclass':
-            raise ValueError(
-                'The Wilkoxon rank sum test can not be used with the multiclass comparison type, '+\
-                'as it can only be used for comparison between two samples.')
         func = partial(stats_test, test=ranksums)
+    if test == 't-test':
+        func = partial(stats_test, test=ttest_ind)
 
     # For each dose get significant features
     if comparison_type=='multiclass':
@@ -181,7 +195,7 @@ def _low_effect_LMM(
     # Intitialize pvals as series or dataframe
     # (based on the number of comparisons per feature)
     if comparison_type == 'multiclass':
-        pvals = pd.Series(index=feat_names)
+        pvals = pd.Series(index=feat_names, dtype=float)
     elif comparison_type == 'binary_each_dose':
         doses = np.unique(drug_dose[drug_dose!=control_dose])
         pvals = pd.DataFrame(index=feat_names, columns=doses)
@@ -196,7 +210,7 @@ def _low_effect_LMM(
                 [x for _,x in data.groupby(by=['drug_dose', 'random_effect']) if x.shape[0]>1]
                 )
         except:
-            pdb.set_trace()
+            return ft,np.nan
 
         # Define LMM
         md = smf.mixedlm("{} ~ drug_dose".format(ft), data,
@@ -232,60 +246,3 @@ def _low_effect_LMM(
 
     return pvals
 
-def _multitest_correct(pvals, multitest_method, fdr):
-    """
-    Multiple comparisons correction of pvalues from univariate tests for a
-    specific drug.
-
-    Parameters
-    ----------
-    pvals : pandas series shape=(n_features,) or
-            pandas dataframe shape=(n_features, n_doses)
-        The pandas structure containing the pvalues from all the statistical
-        tests done for a single drug.
-    multitest_method : string
-        The method to use in statsmodels.statis.multitest.multipletests function.
-    fdr : float
-        False discovery rate.
-
-    Returns
-    -------
-    c_reject : pandas series shape=(n_features)
-        Flags indicating rejected null hypothesis after the correction for
-        multiple comparisons. The null hypothesis for each feature is that the
-        feature is not affected by the compound.
-    c_pvals : pandas series shape=(n_features)
-        The corrected pvalues for each feature. When each dose was tested
-        separately, the min pvalue is stored in this output.
-
-    """
-    from statsmodels.stats.multitest import multipletests
-
-    # Mask nans in pvalues
-    if len(pvals.shape) == 1:
-        mask = ~pd.isnull(pvals.values)
-    else:
-        mask = ~pd.isnull(pvals.values.reshape(-1))
-
-    # Initialize array with corrected pvalues and reject hypothesis flags
-    c_reject = np.ones(mask.shape)*np.nan
-    c_pvals = np.ones(mask.shape)*np.nan
-
-    # Make the correction with the chosen multitest_method
-    c_reject[mask], c_pvals[mask],_,_ = multipletests(
-        pvals.values.reshape(-1)[mask], alpha=fdr, method=multitest_method,
-        is_sorted=False, returnsorted=False
-        )
-
-    # When doses were tested separately, keep only the min pvalue and a
-    # unique reject flag for each feature
-    if len(pvals.shape) == 2:
-        c_reject = np.any(c_reject.reshape(pvals.shape), axis=1)
-        c_pvals = np.min(c_pvals.reshape(pvals.shape), axis=1)
-
-    # Convert the corrected pvals and the flags array to pandas series and
-    # add feature names as index
-    c_pvals = pd.Series(c_pvals, index=pvals.index)
-    c_reject = pd.Series(c_reject, index=pvals.index)
-
-    return c_reject, c_pvals
