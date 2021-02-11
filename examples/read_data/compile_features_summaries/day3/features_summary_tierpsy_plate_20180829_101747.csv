@@ -1,7 +1,0 @@
-# comment line 1,,,,,,,,,,,,,,,,
-# comment line 2,,,,,,,,,,,,,,,,
-file_id,speed_10th,angular_velocity_abs_10th,relative_to_body_speed_midbody_abs_10th,relative_to_body_radial_velocity_head_tip_10th,relative_to_body_angular_velocity_head_tip_abs_10th,relative_to_body_radial_velocity_neck_10th,relative_to_body_angular_velocity_neck_abs_10th,relative_to_body_radial_velocity_hips_10th,relative_to_body_angular_velocity_hips_abs_10th,relative_to_body_radial_velocity_tail_tip_10th,relative_to_body_angular_velocity_tail_tip_abs_10th,speed_neck_10th,angular_velocity_neck_abs_10th,relative_to_neck_radial_velocity_head_tip_10th,relative_to_neck_angular_velocity_head_tip_abs_10th,speed_head_base_10th
-0,-12.53785038,0.004174684,0.398656875,-47.06483078,0.015278101,-9.074595451,0.003269352,-8.834468842,0.00356375,-16.89585876,0.004980305,-18.64162254,0.016470071,-31.63022232,0.043804802,-22.43981743
-1,-13.05666828,0.004153174,0.383060426,-47.25356674,0.016161894,-8.738023758,0.003246797,-8.19618988,0.003294926,-15.32146549,0.004758002,-19.57156372,0.014457622,-31.06795883,0.046001546,-24.19939423
-2,-10.64949512,0.005040365,0.550562143,-56.93113708,0.02097577,-10.20271397,0.004343271,-9.38049221,0.004618578,-17.2980957,0.00609723,-16.79032707,0.02074871,-36.07775879,0.05691329,-20.56369781
-4,-30.47982025,0.003771727,0.542504251,-35.56339645,0.009807987,-11.76820564,0.00398005,-11.29720688,0.003994886,-20.3549881,0.004488972,-38.68958664,0.016451519,-25.6123867,0.028134122,-42.71983719
