@@ -50,7 +50,7 @@ def read_tierpsy_feat_summaries(
         drop_ventral = if True the ventrally signed features are dropped
     """
 
-    from tierpsytools.feature_processing.filter_features import (
+    from tierpsytools.preprocessing.filter_data import (
         drop_ventrally_signed)
 
     if asfloat32:
@@ -59,8 +59,7 @@ def read_tierpsy_feat_summaries(
         dtypes_dict = None
 
     filenames = pd.read_csv(filenames_file, comment='#')
-    features = pd.read_csv(feat_file, index_col=1,
-                           comment='#', dtype=dtypes_dict)
+    features = pd.read_csv(feat_file, comment='#', dtype=dtypes_dict)
 
 
     if drop_ventral:
@@ -139,7 +138,7 @@ def get_all_feat_summaries(root_dir,drop_ventral=True):
         filenames = dataframe with filenames summaries (tierpsy format)
         features = dataframe with features summaries (tierpsy format)
     """
-    from tierpsytools.feature_processing.filter_features import drop_ventrally_signed
+    from tierpsytools.preprocessing.filter_data import drop_ventrally_signed
 
     filenames = get_filenames(root_dir)
 
@@ -239,7 +238,7 @@ def write_all_feat_summaries_to_file(
         feat_sum_filename: string, optional
             The features summaries filename.
     """
-    from tierpsytools.feature_processing.filter_features import drop_ventrally_signed
+    from tierpsytools.preprocessing.filter_data import drop_ventrally_signed
     from tierpsytools import AUX_FILES_DIR
     from pathlib import Path
     import pdb
