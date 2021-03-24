@@ -1,10 +1,13 @@
 pandas
-numpy=1.17.5
+numpy
 scipy
 pathlib
 h5py
 statsmodels
 matplotlib
 scikit-learn
-opencv=3.4.2
-pytables=3.6.1
+opencv
+pytables
+imgstore
+fire
+tqdm

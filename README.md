@@ -3,6 +3,17 @@
 tierpsytools is a Python library for dealing with metadata in worm screening experiments and tierpsy feature processing.
 
 ## Installation
+It is recommended to create an environmemt to install tierpsytools in. In conda you can create an environmnet called tierpsytools with:
+
+```bash
+conda create -n tierpsytools
+```
+
+Activate the environment with:
+
+```bash
+source activate tierpsytools
+```
 
 To install tierpsytools clone the repository from github:
 
@@ -16,7 +27,13 @@ Go in the tierpsy-tools-python directory:
 cd tierpsy-tools-python
 ```
 
-and install the package with:
+Firt, install the dependences with:
+
+```bash
+conda install --file requirements.txt
+```
+
+Then install the tierpsytools package with:
 
 ```bash
 pip install -e .
