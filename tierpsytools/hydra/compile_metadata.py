@@ -80,6 +80,7 @@ def merge_robot_metadata(
 
     # import the sourceplates
     sourceplates = pd.read_csv(sourceplates_file,index_col=False)
+    sourceplates = sourceplates.dropna(axis=0, how='all', inplace=False)
 
     # check if sourceplate dataframe fullfills requirements
     missing_cols = [col
@@ -267,6 +268,7 @@ def populate_96WPs(worm_sorter,
 
     # import worm_sorter metadata and find the start and end rows and columns
     worm_sorter_df = pd.read_csv(worm_sorter)
+    worm_sorter_df = worm_sorter_df.dropna(axis=0, how='all')
     worm_sorter_df['start_row'] = row_from_well(worm_sorter_df.start_well)
     worm_sorter_df['end_row'] = row_from_well(worm_sorter_df.end_well)
     worm_sorter_df['row_range'] = [[chr(c) for c in np.arange(ord(r.start_row),
