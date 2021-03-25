@@ -76,14 +76,15 @@ def read_hydra_metadata(
         feat, fname, meta, feat_id_cols = feat_id_cols,
         add_bluelight=add_bluelight, bluelight_labels=bluelight_labels)
 
-    return feat,meta
+    return feat, meta
 
 
 def build_matching_feat_meta(
         feat, fname, meta,
         feat_id_cols = ['file_id', 'n_skeletons', 'well_name', 'is_good_well'],
         add_bluelight=True,
-        bluelight_labels=['prestim', 'bluelight', 'poststim']):
+        bluelight_labels=['prestim', 'bluelight', 'poststim'],
+        merge_how='left'):
     """
     Creates matching features and metadata dfs from the .csv files of a hydra
     screening (assuming the standardized format of tierpsy and hydra metadata
@@ -110,6 +111,8 @@ def build_matching_feat_meta(
     bluelight_labels : list, optional
         The names of the bluelight conditions as they appear in the file names.
         Only used if add_bluelight is True.
+    merge_how: string, optional
+        Not recommended to change it.
 
     Returns
     -------
@@ -141,14 +144,18 @@ def build_matching_feat_meta(
         )
 
     newmeta = pd.merge(
-        newmeta, meta, on=['imgstore_name','well_name'], how='left'
+        newmeta, meta, on=['imgstore_name','well_name'], how=merge_how
         )
 
     if add_bluelight:
         newmeta = add_bluelight_label(
             newmeta, labels=bluelight_labels)
 
-    assert newmeta.shape[0] == feat.shape[0]
+    if merge_how=='left':
+        assert newmeta.shape[0] == feat.shape[0]
+    elif merge_how=='right':
+        if not newmeta.shape[0] == meta.shape[0]:
+            breakpoint()
 
     _cols = feat_id_cols+['imgstore_name', 'featuresN_filename']
     if add_bluelight:
@@ -181,8 +188,9 @@ def align_bluelight_conditions(
 
     Parameters
     ----------
-    feat: dataframe shape = (n_wells_with_features*n_bluelight_conditions, n_features)
-        Features dataframe containing only feature columns..
+    feat: dataframe shape = (n_wells_with_features*n_bluelight_conditions, n_features) or None
+        Features dataframe containing only feature columns.
+        It can be set to None if we only want to align the metadata dataframe.
     meta : dataframe shape = (n_wells_with_features*n_bluelight_conditions, n_meta_cols)
         Metadata dataframe matching the feat dataframe row-by-row.
     how : string, optional
@@ -220,39 +228,44 @@ def align_bluelight_conditions(
     shared_meta_cols = meta.columns.difference(
         bluelight_specific_meta_cols+merge_on_cols).to_list()
 
-    # Store the feature names
-    feat_names = feat.columns.to_list()
+    if feat is not None:
+        # Store the feature names
+        feat_names = feat.columns.to_list()
 
-    # Concatenate the metadata with the features for a uniform merge based on
-    # metadata
-    feat = pd.concat([meta, feat], axis=1)
+        # Concatenate the metadata with the features for a uniform merge based on
+        # metadata
+        meta = pd.concat([meta, feat], axis=1)
+    else:
+        feat_names = []
 
     # Merge based on the merge_on_cols columns
-    feat = feat.set_index(merge_on_cols)
+    meta = meta.set_index(merge_on_cols)
 
-    feat = feat[feat['bluelight']=='prestim'].join(
-            feat[feat['bluelight']=='bluelight'],
+    meta = meta[meta['bluelight']=='prestim'].join(
+            meta[meta['bluelight']=='bluelight'],
             how=how,
             lsuffix='',
             rsuffix='_bluelight').join(
-                feat[feat['bluelight']=='poststim'],
+                meta[meta['bluelight']=='poststim'],
                 how=how,
                 lsuffix='',
                 rsuffix='_poststim')
 
     # Add the prestim suffix to the bluelight-specific columns
-    feat = feat.rename(
+    meta = meta.rename(
             columns={ft:ft+'_prestim' for ft in bluelight_specific_meta_cols+feat_names})
 
-    # Derive the feature column names in the merged dataframe and use them to
-    # split again the features from the metadata
-    feat_cols = ['_'.join([ft,blue])
-                 for blue in bluelight_conditions
-                 for ft in feat_names]
+    if feat is not None:
+        # Derive the feature column names in the merged dataframe and use them to
+        # split again the features from the metadata
+        feat_cols = ['_'.join([ft,blue])
+                     for blue in bluelight_conditions
+                     for ft in feat_names]
 
-    feat.reset_index(drop=False, inplace=True)
-    meta = feat[feat.columns.difference(feat_cols)]
-    feat = feat[feat_cols]
+        meta.reset_index(drop=False, inplace=True)
+        feat = meta[feat_cols]
+        meta = meta[meta.columns.difference(feat_cols)]
+
 
     # The shared meta columns might have nan values in some of the conditions
     # because of the outer merge. I want to keep only one of these columns for
