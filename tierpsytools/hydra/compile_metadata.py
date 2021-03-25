@@ -890,7 +890,7 @@ def concatenate_days_metadata(
             Filename where all compiled metadata will be saved
 
     return:
-        None
+        all_meta: compiled metadata dataframe
     """
 
     date_regex = r"\d{8}"
@@ -933,7 +933,7 @@ def concatenate_days_metadata(
     all_meta = pd.concat(all_meta,axis=0)
     all_meta.to_csv(saveto,index=False)
 
-    return
+    return all_meta
 
 #%%
 if __name__ == '__main__':
