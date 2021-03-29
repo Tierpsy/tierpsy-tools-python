@@ -227,9 +227,10 @@ def populate_96WPs(worm_sorter,
 
     """
     import string
+    worm_sorter = Path(worm_sorter)
 
     DATE = worm_sorter.stem.split('_')[0]
-    wormsorter_log_fname = Path(worm_sorter).parent / '{}_wormsorter_errorlog.txt'.format(DATE)
+    wormsorter_log_fname = worm_sorter.parent / '{}_wormsorter_errorlog.txt'.format(DATE)
     wormsorter_log_fname.touch()
 
     # parameters for the plates
