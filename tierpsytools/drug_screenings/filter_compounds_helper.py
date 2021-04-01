@@ -10,6 +10,59 @@ import numpy as np
 import pdb
 from joblib import Parallel, delayed
 
+def _stats_test_basic(X, y, test,  **kwargs):
+    # Local function for parallel processing of univariate tests for each drug
+    from joblib import Parallel, delayed
+
+    def _one_fit(ift, samples, **kwargs):
+        samples = [s[~np.isnan(s)] for s in samples if not all(np.isnan(s))]
+        try:
+            rp = test(*samples, **kwargs)
+        except Exception as err:
+            print(err)
+            rp = (np.nan, np.nan)
+        return ift, rp
+
+    parallel = Parallel(n_jobs=-1, verbose=True)
+    func = delayed(_one_fit)
+
+    try:
+        res = parallel(
+            func(ift, [sample[:,ift]
+                  for sample in [np.array(X[y==iy]) for iy in np.unique(y)]],
+                 **kwargs)
+            for ift in range(X.shape[1]))
+    except Exception as err:
+        print(err)
+        pdb.set_trace()
+
+    order = [ift for ift,(r,p) in res]
+    rs = np.array([r for ift,(r,p) in res])
+    ps = np.array([p for ift,(r,p) in res])
+
+    return rs[order], ps[order]
+
+
+def _stats_test_multifeat(X, y, test, **kwargs):
+    # Local function for tests that support many featurres at the same time
+
+    samples = [X[y==iy] for iy in np.unique(y)]
+    try:
+        stats, pvals = test(*samples, axis=0, **kwargs)
+    except Exception as err:
+        print(err)
+        stats, pvals = (np.ones(X.shape[1])*np.nan, np.ones(X.shape[1])*np.nan)
+
+    return stats, pvals
+
+def _stats_test(X, y, test, multifeat=False, **kwargs):
+
+    if multifeat:
+        return _stats_test_multifeat(X, y, test, **kwargs)
+    else:
+        return _stats_test_basic(X, y, test, **kwargs)
+
+
 def _low_effect_univariate(
         X, drug_dose, comparison_type='multiclass', control_dose=.0,
         test='ANOVA', multitest_method='fdr_by', fdr=0.05, n_jobs=-1):
@@ -64,55 +117,24 @@ def _low_effect_univariate(
             binary_each_dose comparison_method instead.
                 """)
 
-    if not isinstance(X, pd.DataFrame):
-        X = pd.DataFrame(X)
-
-    # Local function for parallel processing of univariate tests for each drug
-    def stats_test(X, y, test, **kwargs):
-        from joblib import Parallel, delayed
-
-        def _one_fit(ift, samples, **kwargs):
-            samples = [s[~np.isnan(s)] for s in samples if not all(np.isnan(s))]
-            try:
-                rp = test(*samples, **kwargs)
-            except Exception as err:
-                print(err)
-                rp = (np.nan, np.nan)
-            return ift, rp
-
-        parallel = Parallel(n_jobs=n_jobs, verbose=True)
-        func = delayed(_one_fit)
-
-        try:
-            res = parallel(
-                func(ift, [sample[:,ift]
-                      for sample in [np.array(X[y==iy]) for iy in np.unique(y)]],
-                     **kwargs)
-                for ift in range(X.shape[1]))
-        except Exception as err:
-            print(err)
-            pdb.set_trace()
-
-        order = [ift for ift,(r,p) in res]
-        rs = np.array([r for ift,(r,p) in res])
-        ps = np.array([p for ift,(r,p) in res])
-
-        return rs[order], ps[order]
+    if isinstance(X, pd.DataFrame):
+        ft_names = X.columns
+        X = X.values
 
     # Create the function that will test every feature of a given drug
     if test == 'ANOVA':
-        func = partial(stats_test, test=f_oneway)
+        func = partial(_stats_test, test=f_oneway, multifeat=True)
     elif test.startswith('Kruskal'):
-        func = partial(stats_test, test=kruskal, nan_policy='raise')
+        func = partial(_stats_test, test=kruskal, nan_policy='raise', multifeat=False)
     elif test.startswith('Wilkoxon'):
-        func = partial(stats_test, test=ranksums)
+        func = partial(_stats_test, test=ranksums, multifeat=False)
     if test == 't-test':
-        func = partial(stats_test, test=ttest_ind)
+        func = partial(_stats_test, test=ttest_ind, nan_policy='omit', multifeat=True)
 
     # For each dose get significant features
     if comparison_type=='multiclass':
         _, pvals = func(X, drug_dose)
-        pvals = pd.Series(pvals, index=X.columns)
+        pvals = pd.Series(pvals, name='all')
 
     elif comparison_type=='binary_each_dose':
         if not np.isin(control_dose, np.array(drug_dose)):
@@ -126,8 +148,10 @@ def _low_effect_univariate(
             _, _pvals = func(X[mask], drug_dose[mask])
 
             pvals.append(_pvals)
-        pvals = pd.DataFrame(
-            np.array(pvals).T, index=X.columns, columns=doses)
+
+        # cast into recarray with doses as names
+        pvals = pd.DataFrame(np.array(pvals).T, index=ft_names, columns=doses)
+
     else:
         raise ValueError('Comparison type not recognised.')
 
