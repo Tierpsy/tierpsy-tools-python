@@ -47,7 +47,7 @@ def import_wells_annotations(annotations_file,
                                             'well_label',
                                             'well_name']],
                                     on='file_id',
-                                    right_index=True,
+                                    # right_index=True,
                                     validate='one_to_many')
     annotations_df['imgstore_prestim'] = annotations_df.filename.apply(
                                         lambda x: x.split('/')[0])
@@ -95,8 +95,8 @@ def match_rawvids_annotations(rawvid_dir,
 
     Parameters
     ----------
-    target_dir : directory of RawVideos (pathlib)
-        DESCRIPTION.
+    rawvid_dir : pathlib Path
+        Directory where to look for raw videos.
     annotations_df : output from import_wells_annotations
         DESCRIPTION.
     bluelight_names : TYPE, optional
