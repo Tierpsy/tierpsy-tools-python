@@ -480,20 +480,23 @@ def get_camera_serial(
     # Rename 'rig' to 'instrument_name'
     WELL2CAM = WELL2CAM.rename(columns={'rig':'instrument_name'})
 
-
     # Add camera number to metadata
     out_metadata = pd.merge(
             metadata,WELL2CAM[['instrument_name','well_name','camera_serial']],
             how='outer',left_on=['instrument_name','well_name'],
             right_on=['instrument_name','well_name']
             )
-    assert out_metadata.shape[0] == metadata.shape[0]
+    if not out_metadata.shape[0] == metadata.shape[0]:
+        raise Exception('Wells missing from plate metadata.')
+
+    if not all(~out_metadata['camera_serial'].isna()):
+        raise Exception('Camera serial not found for some wells.')
 
     return out_metadata
 
 
 def add_imgstore_name(
-        metadata, raw_day_dir, n_wells=96
+        metadata, raw_day_dir, n_wells=96, run_number_regex=r'run\d+_'
         ):
     """
     @author: em812
@@ -515,6 +518,7 @@ def add_imgstore_name(
 
     """
     from os.path import join
+    from tierpsytools.hydra.hydra_helper import run_number_from_regex
 
     ## Checks
     # - check if raw_day_dir exists
@@ -541,66 +545,59 @@ def add_imgstore_name(
     metadata = get_camera_serial(metadata, n_wells=n_wells)
 
     # get imgstore full paths = raw video directories that contain a
-    # metadata.yaml file and match the run and camera number
-    MAP2PATH = metadata[
-            ['imaging_run_number','camera_serial']
-            ].drop_duplicates()
-    MAP2PATH['run_name'] = metadata['imaging_run_number'].apply(
-            lambda x: 'run{}_'.format(x)
-            )
-    #print('There are {} videos expected from metadata in {}.\n'.format(
-    #    MAP2PATH.shape[0],aux_day_dir))
-
+    # metadata.yaml file and get the run and camera number from the names
     file_list = [file for file in raw_day_dir.rglob("metadata.yaml")]
     #print('There are {} raw videos found in {}.\n'.format(
     #    len(file_list),raw_day_dir))
+    camera_serial = [str(file.parent.parts[-1]).split('.')[-1]
+                               for file in file_list]
 
-    MAP2PATH['imgstore_name'] = MAP2PATH[
-            ['run_name','camera_serial']
-            ].apply(
-                lambda x: [file
-                           for file in file_list
-                           if np.all([str(ix) in str(file.relative_to(raw_day_dir))
-                           for ix in x])],
-                axis=1)
+    imaging_run_number = run_number_from_regex(file_list, run_number_regex)
+    # imaging_run_number = run_number_from_timestamp(file_list, camera_serial)
+
+    file_meta = pd.DataFrame({
+        'file_name': file_list,
+        'camera_serial': camera_serial,
+        'imaging_run_number': imaging_run_number
+        })
+
+    # keep only short imgstore_name (experiment_day_dir/imgstore_name_dir)
+    file_meta['imgstore_name'] = file_meta['file_name'].apply(
+            lambda x: join(*x.parts[-3:-1]))
+
+    # merge dataframes to store imgstore_name for each metadata row
+    out_metadata = pd.merge(
+            metadata,
+            file_meta[['imaging_run_number','camera_serial','imgstore_name']],
+            how='outer',on=['imaging_run_number','camera_serial'])
 
     ## Checks
     # - check if there are multiple videos with the same day, run and camera
     #   number. If yes, raise a warning (it is not necessarily an error, but
     #   good to let the user know).
-    not_unique = MAP2PATH['imgstore_name'].apply(
-            lambda x: True if len(x)>1 else False).values
-    if np.sum(not_unique)>0:
-        warnings.warn('\n\nThere is(are) {} set(s) of '.format(np.sum(not_unique))
+    # if the imgstore names are more than 3 times the unique combinations of
+    # camera serial and run number, then there are videos that have the same run
+    # number are camera serial by mistake.
+    n_not_unique = file_meta.shape[0]- \
+        3*file_meta.drop_duplicates(subset=['camera_serial', 'imaging_run_number']).shape[0]
+    if n_not_unique!=0:
+        warnings.warn('\n\nThere are {} sets of '.format(n_not_unique)
                       +'videos with the same day, run and camera number.\n\n'
                      )
     # - check if there are missing videos (we expect to have videos from every
     #   camera of a given instrument). If yes, raise a warning.
-    not_found = MAP2PATH['imgstore_name'].apply(
-            lambda x: True if len(x)==0 else False).values
-    if np.sum(not_found)>0:
-        not_found = MAP2PATH.loc[not_found,:]
+    breakpoint()
+    if out_metadata['imgstore_name'].isna().sum()>0:
+        not_found = out_metadata.loc[out_metadata['imgstore_name'].isna(),
+                                 ['imaging_run_number', 'camera_serial']]
         for i,row in not_found.iterrows():
             warnings.warn('\n\nNo video found for day '
                           +'{}, run {}, camera {}.\n\n'.format(
                                   raw_day_dir.stem,*row.values)
                           )
 
-    # keep only short imgstore_name (experiment_day_dir/imgstore_name_dir)
-    MAP2PATH['imgstore_name'] = MAP2PATH['imgstore_name'].apply(
-            lambda x: [join(*ix.parts[-3:-1]) for ix in x])
-
-    # merge dataframes to store imgstore_name for each metadata row
-    out_metadata = pd.merge(
-            metadata,
-            MAP2PATH[['imaging_run_number','camera_serial','imgstore_name']],
-            how='outer',on=['imaging_run_number','camera_serial'])
-
-    # explode metadata to have one row per video in case of multiple videos
-    # with the same data,run and camera number
-    out_metadata = explode_df(out_metadata, ['imgstore_name'])
-
     return out_metadata
+
 
 def get_date_of_runs_from_aux_files(manual_metadata_file):
     """
@@ -672,7 +669,9 @@ def check_dates_in_yaml(metadata,raw_day_dir):
 
 def get_day_metadata(
         imaging_plate_metadata, manual_metadata_file,
-        merge_on=['imaging_plate_id'], n_wells=96, saveto=None,
+        merge_on=['imaging_plate_id'], n_wells=96,
+        run_number_regex=r'run\d+_',
+        saveto=None,
         del_if_exists=False, include_imgstore_name = True, raw_day_dir=None
         ):
     """
@@ -693,6 +692,8 @@ def get_day_metadata(
         merge_on: column name or list of columns
                 Column(s) in common in imaging_plate_metadata and
                 manual_metadata, that can be used to merge them
+        run_number_regex: regex defining the format of the run number in
+                in the raw video file names. Default translates to 'run#_'.
         n_wells: integer
                 number of wells in imaging plate
         saveto: .csv file path
@@ -767,7 +768,8 @@ def get_day_metadata(
                     )
         if raw_day_dir.exists:
             metadata = add_imgstore_name(
-                    metadata,raw_day_dir,n_wells=n_wells
+                    metadata,raw_day_dir,n_wells=n_wells,
+                    run_number_regex=run_number_regex
                     )
             #check_dates_in_yaml(metadata,raw_day_dir)
         else:

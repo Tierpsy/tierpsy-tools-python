@@ -5,3 +5,4 @@
 .vscode/
 *.egg-info/
 todo.txt
+test_scripts/

@@ -13,7 +13,7 @@ from sklearn.decomposition import PCA
 def univariate_tests(
         X, y, control='N2', test='ANOVA',
         comparison_type='multiclass',
-        multitest_correction='fdr_by', fdr=0.05,
+        multitest_correction='fdr_by', alpha=0.05,
         n_jobs=-1):
     """
     Test whether a single compound has siginificant effects compared to the
@@ -25,21 +25,21 @@ def univariate_tests(
 
     Parameters
     ----------
-    X : TYPE
-        DESCRIPTION.
-    y : TYPE
-        DESCRIPTION.
-    comparison_type : TYPE, optional
-        DESCRIPTION. The default is 'multiclass'.
+    X : dataframe or array
+        feature matrix.
+    y : array-like
+        labes of the samples for the comparison.
+    comparison_type : string, optional
+        ['multiclass', 'binary_each_class']. The default is 'multiclass'.
     control : float, optional. The default is .0.
         The drug_dose entry for the control points.
         Must provide control dose if the comparison_type is 'binary_each_group'.
     test : TYPE, optional
         DESCRIPTION. The default is 'ANOVA'.
     multitest_correction : string or None, optional
-        DESCRIPTION. The default is 'fdr_by'.
-    fdr : TYPE, optional
-        DESCRIPTION. The default is 0.05.
+        DESCRIPTION. The default is 'alpha_by'.
+    alpha : TYPE, optional
+      alpha  DESCRIPTION. The default is 0.05.
 
     Raises
     ------
@@ -60,16 +60,16 @@ def univariate_tests(
     if not np.isin(control, np.array(y)):
         raise ValueError('control not found in the y array.')
 
-    if test.startswith('Wilkoxon') or test == 't-test':
+    if test.startswith('Mann') or test == 't-test':
         if comparison_type=='multiclass' and np.unique(y).shape[0]>2:
             raise ValueError(
                 """
-            The Wilkoxon rank sum test cannot be used to compare between
+            The {} cannot be used to compare between
             more than two groups. Use a different test or the
             binary_each_dose comparison_method instead.
-                """)
+                """. format(test))
         else:
-            comparison_type = 'binary_each_group'
+            comparison_type = 'binary_each_class'
 
     if not isinstance(X, pd.DataFrame):
         X = pd.DataFrame(X)
@@ -80,7 +80,8 @@ def univariate_tests(
 
         def _one_fit(ift, samples, **kwargs):
             samples = [s[~np.isnan(s)] for s in samples if not all(np.isnan(s))]
-            if len(samples)<2:
+            # TODO
+            if len(samples)<2: # if only one group --> put it outside
                 return ift, (np.nan, np.nan)
             return ift, test(*samples, **kwargs)
 
@@ -118,7 +119,7 @@ def univariate_tests(
         pvals = pd.DataFrame(pvals.T, index=X.columns, columns=[test])
         stats = pd.DataFrame(stats.T, index=X.columns, columns=[test])
 
-    elif comparison_type=='binary_each_group':
+    elif comparison_type=='binary_each_class':
         groups = np.unique(y[y!=control])
 
         pvals=[]
@@ -135,39 +136,34 @@ def univariate_tests(
     else:
         raise ValueError('Comparison type not recognised.')
 
-    reject, pvals = _multitest_correct(pvals, multitest_correction, fdr)
+    reject, pvals = _multitest_correct(pvals, multitest_correction, alpha)
 
     return stats, pvals, reject
 
 def get_effect_sizes(
         X, y, control='N2',
-        test='ANOVA', comparison_type='multiclass',
-        n_jobs=-1):
+        test='ANOVA', comparison_type='multiclass'
+        ):
     """
-    Test whether a single compound has siginificant effects compared to the
-    control using univariate tests for each feature.
-    Each feature is tested using one of the methods 'ANOVA', 'Kruskal-Wallis',
-    'Mann-Whitney' or 't-test'.
-    The pvalues from the different features are corrected for multiple
-    comparisons using the multitest methods of statsmodels.
+    Get the effect sizes of statistical comparisons between groups defined in y.
 
     Parameters
     ----------
-    X : TYPE
-        DESCRIPTION.
-    drcomparison_variableug_dose : TYPE
-        DESCRIPTION.
-    comparison_type : TYPE, optional
-        DESCRIPTION. The default is 'multiclass'.
-    control : float, optional. The default is .0.
-        The drug_dose entry for the control points.
-        Must provide control dose if the comparison_type is 'binary_each_dose'.
-    test : TYPE, optional
-        DESCRIPTION. The default is 'ANOVA'.
-    multitest_method : TYPE, optional
-        DESCRIPTION. The default is 'fdr_by'.
-    fdr : TYPE, optional
-        DESCRIPTION. The default is 0.05.
+    X : array-like, shape=(n_samples, n_features)
+        The features matrix.
+    y : list-like, shape=(n_samples)
+        The dependent variable - the variable that defines the groups to compare.
+    control : str
+        The group in y which is considered the control group.
+    comparison_type : str, optional
+        'multiclass' or 'binary_each_group'. The default is 'multiclass'.
+        When 'multiclass', the null hypothesis is that all groups come from the same
+        distribution, the alternative hypothesis is that at least one of them
+        comes from a different distribution.
+        When 'binary_each_group', then each group will be compared with the control
+        group defined in the 'control' parameter.
+    test : str, optional
+        Mann-Whitney', 'Kruskal-Wallis', 'ANOVA' or 't-test'. The default is 'ANOVA'.
 
     Raises
     ------
@@ -206,13 +202,19 @@ def get_effect_sizes(
         for ft in X.columns:
             effect[ft] = eta_squared_ANOVA(*[s.loc[~s[ft].isna(), ft] for s in samples])
         effect = pd.DataFrame(effect, columns=['_'.join([test,'effect_size'])])
+
+    elif test=='t-test':
+        effect = {}
+        for igrp, grp in enumerate(groups):
+            mask = np.isin(y,[control, grp])
+            effect[grp] = cohen_d(*[x for ix,x in X[mask].groupby(by=y)])
+        effect = pd.DataFrame(effect, index=X.columns)
+
     else:
         if test=='Mann-Whitney' or test=='Kruskal-Wallis':
             func = cliffs_delta
         elif test=='ANOVA':
             func = eta_squared_ANOVA
-        elif test=='t-test':
-            func = cohen_d
 
         effect = pd.DataFrame(index=X.columns, columns=groups)
         for igrp, grp in enumerate(groups):
@@ -224,16 +226,30 @@ def get_effect_sizes(
     return effect
 
 #%% Effect size functions
-def cohen_d(x,y):
+def cohen_d(x,y, axis=0):
     """ Return the cohen d effect size for t-test
 
     """
     from numpy import nanstd, nanmean, sqrt
 
-    nx = len(x)
-    ny = len(y)
-    dof = nx + ny - 2
-    return (nanmean(x) - nanmean(y)) / sqrt(((nx-1)*nanstd(x, ddof=1) ** 2 + (ny-1)*nanstd(y, ddof=1) ** 2) / dof)
+    x = np.array(x)
+    y = np.array(y)
+
+    if len(x.shape)==1:
+        nx = len(x)
+        ny = len(y)
+        dof = nx + ny - 2
+        return (nanmean(y) - nanmean(x)) / sqrt(((nx-1)*nanstd(x, ddof=1) ** 2 + (ny-1)*nanstd(y, ddof=1) ** 2) / dof)
+    elif len(x.shape)==2:
+        if axis not in [0,1]:
+            raise Exception('Axis out of range.')
+        nx = x.shape[axis]
+        ny = y.shape[axis]
+        dof = nx + ny - 2
+        return (nanmean(y,axis=axis) - nanmean(x,axis=axis)) / \
+            sqrt(((nx-1)*nanstd(x, axis=axis, ddof=1) ** 2 + (ny-1)*nanstd(y, axis=axis, ddof=1) ** 2) / dof)
+    else:
+        raise Exception('Samples must be 1D or 2D.')
 
 
 def eta_squared_ANOVA( *args):
@@ -372,3 +388,12 @@ def _multitest_correct(pvals, multitest_method, fdr):
         c_reject = pd.Series(c_reject, index=pvals.index)
 
     return c_reject, c_pvals
+
+#%% Bootstrapping
+def bootstrapped_ci(x, func, n_boot, which_ci=95, axis=None):
+    from seaborn.algorithms import bootstrap
+    from seaborn.utils import ci
+
+    boot_distribution = bootstrap(x, func=func, n_boot=n_boot, axis=axis)
+
+    return ci(boot_distribution, which=which_ci, axis=axis)

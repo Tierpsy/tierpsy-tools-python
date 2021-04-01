@@ -12,14 +12,17 @@ import pdb
 
 #%% plotting function
 def plot_feature_boxplots(
-        feat_to_plot, y_class, scores, pvalues=None,
+        feat_to_plot, y_class, scores=None, pvalues=None,
         figsize=None, saveto=None, xlabel=None,
         close_after_plotting=False
         ):
 
     classes = np.unique(y_class)
     for i,ft in enumerate(feat_to_plot):
-        title = ft+'\n'+'score={:.3f}'.format(scores[i])
+        if scores is not None:
+            title = ft+'\n'+'score={:.3f}'.format(scores[i])
+        else:
+            title=None
         if pvalues is not None:
             title+=' - p-value = {}'.format(pvalues[i])
         plt.figure(figsize=figsize)
@@ -37,7 +40,7 @@ def plot_feature_boxplots(
 
 
 #%%% mRMR feature selection
-def mRMR_select(feat_set, redundancy, relevance, criterion='MIQ'):
+def mRMR_select(feat_set, redundancy, relevance, criterion='MIQ', redund_tol=0.0001):
 
     # index in the enntire feature vector
     index = np.arange(relevance.shape[0])
@@ -51,8 +54,8 @@ def mRMR_select(feat_set, redundancy, relevance, criterion='MIQ'):
     t_i = np.delete(relevance, feat_set)
 
     if criterion=='MIQ':
-        max_score = np.max(t_i/(c_i+0.01))
-        select = index[np.argmax(t_i/(c_i+0.01))]
+        max_score = np.max(t_i/(c_i+redund_tol))
+        select = index[np.argmax(t_i/(c_i+redund_tol))]
     elif criterion=='MID':
         max_score = np.max(t_i-c_i)
         select = index[np.argmax(t_i-c_i)]
@@ -138,8 +141,11 @@ def get_relevance(feat, y_class, relevance_func='mutual_info'):
         elif relevance_func == 'kruskal':
             relevance = np.zeros(feat.shape[1])
             for i, ft in enumerate(feat.T):
-                relevance[i], _ = kruskal(
-                    *[ft[y_class==iy] for iy in np.unique(y_class)])
+                try:
+                    relevance[i], _ = kruskal(
+                        *[ft[y_class==iy] for iy in np.unique(y_class)])
+                except:
+                    relevance[i] = np.nan
     else:
         feat = np.array(feat)
         relevance = np.zeros(feat.shape[1])
