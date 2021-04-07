@@ -9,6 +9,165 @@ import re
 import numpy as np
 import pandas as pd
 
+def add_imgstore_name(
+        metadata, raw_day_dir, n_wells=96, run_number_regex=r'run\d+_'
+        ):
+    """
+    @author: em812
+    Add the imgstore name of the hydra videos to the day metadata dataframe.
+
+    param:
+        metadata = pandas dataframe
+            Dataframe with metadata for a given day of experiments.
+            See README.md for details on fields.
+        raw_day_dir = path to directory
+            RawVideos root directory of the specific day, where the
+            imgstore names can be found.
+        n_wells = integer
+            Number of wells in imaging plate (only 96 supported at the
+            moment)
+
+    return:
+        out_metadata = metadata dataframe with imgstore_name added
+
+    """
+    from os.path import join
+    from tierpsytools.hydra.hydra_helper import run_number_from_regex
+
+    ## Checks
+    # - check if raw_day_dir exists
+    if not raw_day_dir.exists:
+        warnings.warn("\nRawVideos day directory was not found. "
+                      +"Imgstore names cannot be added to the metadata.\n",
+                      +"Path {} not found.".format(raw_day_dir))
+        return metadata
+
+    # - if the raw_dat_dir contains a date in yyyymmdd format, check if the
+    #   date in raw_day_dir matches the date of runs stored in the metadata
+    #   dataframe
+    date_of_runs = metadata['date_yyyymmdd'].astype(str).values[0]
+    date_in_dir = re.findall(r'(20\d{6})',raw_day_dir.stem)
+    if len(date_in_dir)==1 and date_of_runs != date_in_dir[0]:
+        warnings.warn(
+            '\nThe date in the RawVideos day directory does not match ' +
+            'the date_yyyymmdd in the day metadata dataframe. '
+            'Imgstore names cannot be added to the metadata.\n'+
+            'Please check the dates and try again.')
+        return metadata
+
+    # add camera serial number to metadata
+    metadata = get_camera_serial(metadata, n_wells=n_wells)
+
+    # get imgstore full paths = raw video directories that contain a
+    # metadata.yaml file and get the run and camera number from the names
+    file_list = [file for file in raw_day_dir.rglob("metadata.yaml")]
+    #print('There are {} raw videos found in {}.\n'.format(
+    #    len(file_list),raw_day_dir))
+    camera_serial = [str(file.parent.parts[-1]).split('.')[-1]
+                               for file in file_list]
+
+    imaging_run_number = run_number_from_regex(file_list, run_number_regex)
+    # imaging_run_number = run_number_from_timestamp(file_list, camera_serial)
+
+    file_meta = pd.DataFrame({
+        'file_name': file_list,
+        'camera_serial': camera_serial,
+        'imaging_run_number': imaging_run_number
+        })
+
+    # keep only short imgstore_name (experiment_day_dir/imgstore_name_dir)
+    file_meta['imgstore_name'] = file_meta['file_name'].apply(
+            lambda x: "/".join(x.parts[-3:-1]))
+
+    # merge dataframes to store imgstore_name for each metadata row
+    out_metadata = pd.merge(
+            metadata,
+            file_meta[['imaging_run_number','camera_serial','imgstore_name']],
+            how='outer',on=['imaging_run_number','camera_serial'])
+
+    ## Checks
+    # - check if there are missing videos (we expect to have videos from every
+    #   camera of a given instrument). If yes, raise a warning.
+    if out_metadata['imgstore_name'].isna().sum()>0:
+        not_found = out_metadata.loc[out_metadata['imgstore_name'].isna(),
+                                 ['imaging_run_number', 'camera_serial']]
+        for i,row in not_found.iterrows():
+            warnings.warn('\n\nNo video found for day '
+                          +'{}, run {}, camera {}.\n\n'.format(
+                                  raw_day_dir.stem,*row.values)
+                          )
+
+    return out_metadata
+
+
+def get_date_of_runs_from_aux_files(manual_metadata_file):
+    """
+    @author: em812
+    Finds the date of the runs in the manual_metadata_file.
+    If the date field is missing, then it looks for the date of runs in the
+    manual_metadata_file file name (in the format yyyymmdd).
+    If there is no date in this format in the file name, then it looks at the
+    folder name (which is the folder for a specific day of experiments).
+    If the date in yyyymmdd format cannot be found in any of these locations,
+    an error is raised.
+
+    param:
+        manual_metadata_file: full path to .csv file
+            Full path to the manual metadata file
+
+    return:
+        date_of_runs: string
+            The date of the experiments, in yyyymmdd format
+    """
+    manual_metadata = pd.read_csv(manual_metadata_file, index_col=False)
+    if 'date_yyyymmdd' in manual_metadata.columns:
+        date_of_runs = manual_metadata['date_yyyymmdd'].astype(str).values[0]
+    else:
+        date_of_runs = re.findall(r'(20\d{6})',manual_metadata_file.stem)
+        if len(date_of_runs)==1:
+            date_of_runs = date_of_runs[0]
+        else:
+            date_of_runs = re.findall(r'(20\d{6})',
+                                      manual_metadata_file.parent.stem)
+            if len(date_of_runs)==1:
+                date_of_runs = date_of_runs[0]
+            else:
+                raise ValueError('The date of the experiments cannot be '
+                                 +'identified in the auxiliary files path '
+                                 +'names. Please add a data_yyyymmdd column '
+                                 +'to the manual_metadata file.'
+                                 )
+
+    # If the aux_day_dir contains the date, then make sure it matches the date
+    # extracted from the manual_metadate_file
+    date_in_dir = re.findall(r'(20\d{6})',manual_metadata_file.parent.stem)
+    if len(date_in_dir)==1 and date_in_dir[0]!=date_of_runs:
+        raise ValueError('\nThe date_of_runs taken from the '
+                         +'manual_metadata_file ({}) '.format(date_of_runs)
+                         +'does not match the date of runs in the folder '
+                         +'name {}.\n'.format(manual_metadata_file.parent)
+                         +'Please set the correct date and try again.')
+    return date_of_runs
+
+
+def convert_bad_wells_lut(bad_wells_csv):
+    """
+    author: @ilbarlow
+    Function for converting bad_wells_csv for input into dataframes
+    Input:
+    bad_wells_csv -.csv file listing imaging_plate_id and well_name
+
+    Output:
+    bad_wells_df - DataFrame with columns imaging_plate_id, well_name and
+    is_bad_well=True
+    """
+
+    bad_wells_df = pd.read_csv(bad_wells_csv)
+                                         # encoding='utf-8-sig')
+    bad_wells_df['is_bad_well'] = True
+
+    return bad_wells_df
+
 def column_from_well(wells_series):
     return wells_series.apply(lambda x: re.findall(r'\d+', x)[0]).astype(int)
 
@@ -118,6 +277,26 @@ def run_number_from_timestamp(file_list, camera_serial):
     assert all([x==y for x,y in zip(file_list, df['file_name'].to_list())])
 
     return df['imaging_run_number'].to_list()
+
+
+def check_dates_in_yaml(metadata,raw_day_dir):
+    """
+    Checks the day metadata, to make sure that the experiment date stored in
+    the metadata dataframe matches the date in the metadata.yaml file in the
+    corresponding raw video directory.
+
+    param:
+        metadata : pandas dataframe
+            Dataframe containing all the metadata from one day of experiments
+        raw_day_dir : directory path
+            Path of the directory containing the RawVideos for the
+            specific day of experiments.
+
+    return:
+        None
+    """
+
+    return
 
 
 if __name__=="__main__":
