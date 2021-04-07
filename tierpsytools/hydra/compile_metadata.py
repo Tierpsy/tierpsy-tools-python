@@ -13,7 +13,402 @@ import re
 import warnings
 import numpy as np
 
-#%%
+#%% General functions for all types of experiments
+def populate_96WPs(worm_sorter,
+                   n_columns=12,
+                   n_rows=8,
+                   saveto=None,
+                   del_if_exists=False
+                   ):
+    """
+    @author: ilbarlow
+
+    Function to explode summary info in wormsorter files and create plate_metadata
+    with all the information per well per unique imaging plate.
+    Works with plates that have been filled row-wise and column-wise
+    consecutively
+
+    Parameters
+    ----------
+    worm_sorter : .csv file with headers 'start_well', 'end_well' and details
+        of strains and media in range of wells.
+    saveto : None, 'default' or path to csv file
+        If None, the plate metadata will not be saved in a file.
+        If 'default', the plate_metadata will be saved in a csv at the same
+        location as the wormsorter file.
+        If path, the plate_metadata will be saved in a csv at the path location.
+        The default is None.
+    del_if_exists : Bool, optional
+        If a file is found at the location specified in saveto and del_if_exists
+        is True, then the file will be deleted and regenerated. If del_if_exists
+        is False, then the file will not be deleted and the function will exit
+        with error. The default is False.
+
+    Returns
+    -------
+    plate_metadata: one line per well; can be used in get_day_metadata
+            function to compile with manual metadata
+    """
+    import string
+    worm_sorter = Path(worm_sorter)
+
+    DATE = worm_sorter.stem.split('_')[0]
+    wormsorter_log_fname = worm_sorter.parent / '{}_wormsorter_errorlog.txt'.format(DATE)
+    wormsorter_log_fname.touch()
+
+    # parameters for the plates
+    column_names = np.arange(1, n_columns+1)
+    row_names = list(string.ascii_uppercase[0:n_rows])
+    well_names = [i+str(b) for i in row_names for b in column_names]
+    total_nwells = len(well_names)
+
+    print('Total number of wells: {}'.format(total_nwells))
+
+    # checking if and where to save the file
+    if saveto is not None:
+        if saveto == 'default':
+            saveto = Path(worm_sorter).parent / ('{}_plate_metadata.csv'.format(DATE))
+
+        if saveto.exists():
+            if del_if_exists:
+                warnings.warn('\nPlate metadata file {} already '.format(saveto)
+                              + 'exists. File will be overwritten.')
+                saveto.unlink()
+            else:
+                raise Exception('\nPlate metadata file {} already '.format(saveto)
+                              + 'exists. Nothing to do here. If you want to '
+                              + 'recompile the wormsorter metadata, rename or delete the '
+                              + 'exisiting file or del_if_exists to True.')
+        else:
+            print ('saving to {}'.format(saveto))
+
+    # import worm_sorter metadata
+    worm_sorter_df = pd.read_csv(worm_sorter)
+
+    # find the start and end rows and columns
+    worm_sorter_df = worm_sorter_df.dropna(axis=0, how='all')
+    worm_sorter_df['start_row'] = row_from_well(worm_sorter_df.start_well)
+    worm_sorter_df['end_row'] = row_from_well(worm_sorter_df.end_well)
+    worm_sorter_df['row_range'] = [[chr(c) for c in np.arange(ord(r.start_row),
+                                                              ord(r.end_row)+1)]
+                                   for i, r in worm_sorter_df.iterrows()]
+    worm_sorter_df['start_column'] = column_from_well(worm_sorter_df.start_well)
+    worm_sorter_df['end_column'] = column_from_well(worm_sorter_df.end_well)
+    worm_sorter_df['column_range'] = [list(np.arange(r.start_column,
+                                                 r.end_column+1))
+                                      for i, r in worm_sorter_df.iterrows()]
+
+    worm_sorter_df['well_name'] = [[i+str(b) for i in r.row_range
+                                    for b in r.column_range]
+                                for i, r in worm_sorter_df.iterrows()]
+
+    plate_metadata = explode_df(worm_sorter_df, 'well_name')
+
+    # do check to make sure there aren't multiple  plates
+    plate_errors =  []
+    unique_plates = plate_metadata['imaging_plate_id'].unique()
+    for plate in unique_plates:
+        if plate_metadata[plate_metadata['imaging_plate_id'] == plate].shape[0] > total_nwells:
+            warnings.warn('{}: more than {} wells'.format(plate, total_nwells))
+            plate_errors.append(plate)
+            with open(wormsorter_log_fname, 'a') as fid:
+                fid.write(plate + '\n')
+    if len(plate_errors) == 0:
+        with open(wormsorter_log_fname, 'a') as fid:
+            fid.write ('No wormsorter plate errors \n')
+
+    if saveto is not None:
+        plate_metadata.to_csv(saveto, index=False)
+
+    return plate_metadata
+
+
+def get_day_metadata(
+        complete_plate_metadata, manual_metadata_file,
+        merge_on=['imaging_plate_id'], n_wells=96,
+        run_number_regex=r'run\d+_',
+        saveto=None,
+        del_if_exists=False, include_imgstore_name = True, raw_day_dir=None
+        ):
+    """
+    @author: em812
+    Incorporates the robot metadata and the manual metadata of the hydra rigs
+    to get all the metadata for a given day of experiments.
+    Also, it adds the imgstore_name of the hydra vidoes.
+
+    param:
+        complete_plate_metadata: pandas dataframe
+                Dataframe containing the metadata for all the
+                wells of each imaging plate (If the robot was used, then this
+                is the complete_plate_metadata obtained by the
+                merge_robot_wormsorter function)
+        manual_metadata: .csv file path
+                File with the details of rigs and runs
+                (see README for minimum required fields)
+        merge_on: column name or list of columns
+                Column(s) in common in complete_plate_metadata and
+                manual_metadata, that can be used to merge them
+        run_number_regex: regex defining the format of the run number in
+                in the raw video file names. Default translates to 'run#_'.
+        n_wells: integer
+                number of wells in imaging plate
+        saveto: .csv file path
+                File path to save the day metadata in (if None, the
+                metadata are saved in the same folder as the manual metadata)
+        del_if_exists: boolean
+                If True and the metadata file exists in the defined
+                path, the existing file will be deleted and a new file will be
+                created. If False, the operation will be aborted and a warning
+                will be produced.
+        include_imgstore_name: boolean
+                If True, the function will call the add_imgstore_name function
+                to look in the raw_day_dir and get the imgstore names for each
+                row in the metadata.
+        raw_day_dir: directory path
+                Path of the directory containing the RawVideos for the
+                specific day of experiments. It is used to get the imgstore
+                names. If None, then the standard file structure is assumed,
+                and the path is obtained by the path of the auxiliary files
+                for the specific day, by replacing AuxiliaryFile by RawVideos.
+
+    return:
+        metadata: pandas dataframe
+            dataframe with day metadata
+    """
+    from tierpsytools.hydra.hydra_helper import \
+        get_date_of_runs_from_aux_files, add_imgstore_name
+
+    manual_metadata_file = Path(manual_metadata_file)
+
+    #find the date of the hydra experiments
+    date_of_runs = get_date_of_runs_from_aux_files(manual_metadata_file)
+
+    aux_day_dir = manual_metadata_file.parent
+    if saveto is None:
+        saveto = aux_day_dir / '{}_day_metadata.csv'.format(date_of_runs)
+
+    if saveto.exists():
+        if  del_if_exists:
+            warnings.warn('\n\nMetadata file {} already exists.'.format(saveto)
+                          +' File will be overwritten.\n\n')
+            saveto.unlink()
+        else:
+            warnings.warn('\n\nMetadata file {} already exists.'.format(saveto)
+                          +' Nothing to do here.\n\n')
+            return
+
+    manual_metadata = pd.read_csv(manual_metadata_file, index_col=False)
+
+    if 'date_yyyymmdd' not in manual_metadata.columns:
+        manual_metadata['date_yyyymmdd'] = str(date_of_runs)
+
+
+    # make sure there is overlap in the image_plate_id
+    if not np.all(
+            np.isin(complete_plate_metadata[merge_on],manual_metadata[merge_on])
+            ):
+        warnings.warn('There are {} values in the imaging '.format(merge_on)
+                    +'plate metadata that do not exist in the manual '
+                    +'metadata. These plates will be dropped from the day'
+                    +'metadata file.')
+
+    # merge two dataframes
+    metadata = pd.merge(
+            complete_plate_metadata, manual_metadata, how='inner',
+            left_on=merge_on,right_on=merge_on,indicator=False
+            )
+
+    # clean up and rearrange
+    metadata.rename(columns={'destination_well':'well_name'}, inplace=True)
+
+    # add imgstore name
+    if include_imgstore_name:
+        if raw_day_dir is None:
+            raw_day_dir = Path(
+                    str(aux_day_dir).replace('AuxiliaryFiles','RawVideos')
+                    )
+        if raw_day_dir.exists:
+            metadata = add_imgstore_name(
+                    metadata, raw_day_dir, n_wells=n_wells,
+                    run_number_regex=run_number_regex
+                    )
+            #check_dates_in_yaml(metadata,raw_day_dir)
+        else:
+            warnings.warn("\nRawVideos day directory was not found. "
+                          +"Imgstore names cannot be added to the metadata.\n",
+                          +"Path {} not found.".format(raw_day_dir)
+                          )
+
+    # Save to csv file
+    print('Saving metadata file: {} '.format(saveto))
+    metadata.to_csv(saveto, index=False)
+
+    return metadata
+
+
+def concatenate_days_metadata(
+        aux_root_dir, list_days=None, saveto=None
+        ):
+    """
+    @author: em812
+    Reads all the yyyymmdd_day_metadata.csv files from the different days of
+    experiments and creates a full metadata file all_metadata.csv.
+
+    param:
+        aux_root_dir: path to directory
+            Root AuxiliaryFiles directory containing all the folders
+            for the individual days of experiments
+        list_days: list like object
+            List of folder names (experiment days) to read from.
+            If None (default), it reads all the subfolders in the root_dir.
+        saveto: path to .csv file
+            Filename where all compiled metadata will be saved
+
+    return:
+        all_meta: compiled metadata dataframe
+    """
+
+    date_regex = r"\d{8}"
+    aux_root_dir = Path(aux_root_dir)
+
+    if saveto is None:
+        saveto = aux_root_dir.joinpath('metadata.csv')
+
+    if list_days is None:
+        list_days = [d for d in aux_root_dir.glob("*") if d.is_dir()
+                    and re.search(date_regex, str(d)) is not None]
+
+    ## Compile all metadata from different days
+    meta_files = []
+    for day in list_days:
+        ## Find the correct day_metadata file
+        auxfiles = [file for file in aux_root_dir.joinpath(day).glob('*_day_metadata.csv')]
+
+        # checks
+        if len(auxfiles) > 1:
+            is_ok = np.zeros(len(auxfiles)).dtype(bool)
+            for ifl,file in enumerate(auxfiles):
+                if len(file.stem.replace('_day_metadata',''))==8:
+                    is_ok[ifl]=True
+            if np.sum(is_ok)==1:
+                auxfiles = [file
+                            for ifl,file in enumerate(auxfiles)
+                            if is_ok[ifl]]
+            else:
+                raise ValueError('More than one *_day_metatada.csv files found'
+                                 +'in {}. Compilation '.format()
+                                 +'of metadata is aborted.')
+
+        meta_files.append(auxfiles[0])
+
+    all_meta = []
+    for file in meta_files:
+        all_meta.append(pd.read_csv(file))
+
+    all_meta = pd.concat(all_meta,axis=0)
+    all_meta.to_csv(saveto,index=False)
+
+    return all_meta
+
+
+#%% Experiments without plate shuffling
+def get_drug_metadata(sourceplates_file, imaging2source_file):
+    """
+    author: @em812
+    This function creates a dataframe with the drug content of every well of
+    every imaging plate based on the corresponding source plate id and the
+    information about the drug content of the source plates found in the
+    sourceplates_file.
+
+    Parameters
+    ----------
+    sourceplates_file : path
+        The sourceplates file that defines the drug content of each unique
+        source plate used in the given tracking day.
+    imaging2source_file : path
+        path to imaging2source_file which contain a simple mapping between
+        every imaging plate screened in the given tracking day and the
+        source plate used to make the imaging plate.
+
+    Returns
+    -------
+    drug_metadata : pandas dataframe
+        A dataframe that contains information about the drug content of each
+        well of every imaging plate screened in a given tracking day.
+
+    """
+    sourceplates = pd.read_csv(sourceplates_file)
+    imag2source = pd.read_csv(imaging2source_file)
+
+    drug_metadata = pd.merge(
+        sourceplates, imag2source, on='source_plate_id', how='outer')
+
+    drug_metadata = drug_metadata.sort_values(by=['imaging_plate_id', 'well_name'])
+
+    return drug_metadata
+
+def merge_basic_and_drug_meta(
+        plate_metadata, drug_metadata,
+        merge_on=['imaging_plate_id', 'well_name'],
+        saveto=None, del_if_exists=False
+        ):
+    """
+    Add the drug_metadata to the plate_metadata to get the complete_plate_metadata
+    (all the information about every well in every imaging plate at a given
+     tracking day).
+
+    Parameters
+    ----------
+    plate_metadata : pandas dataframe
+        The output of populate_96WP.
+    drug_metadata : pandas dataframe
+        data about the drug content of every well of every imaging_plate screened
+        at a given day.
+    merge_on : list of columns names, optional
+        column names that can be found both in plate_metadata and drug_metadata
+        and which can be used to merge the two dataframes.
+        The default is ['imaging_plate_id', 'well_name'].
+    saveto : None or path to csv file, optional
+        If not None, then the complete_plate_metadata will be saved in the
+        csv file defined in the path. The default is None.
+    del_if_exists : bool, optional
+        Definesthe behaviour if saveto is not None and the file defined in saveto
+        exists. If del_if_exists is True the file will ne deleted and overwriten.
+        If del_if_exists in False the, the function will exit with error.
+        The default is False.
+
+    Returns
+    -------
+    complete_plate_metadata : pandas dataframe
+        the complete plate metadata with all the infromation about every well
+        of every imaging plate in a given tracking day.
+
+    """
+
+    # check if file exists
+    if (saveto is not None) and (Path(saveto).exists()):
+        if del_if_exists:
+            warnings.warn('Plate metadata file {} already '.format(saveto)
+                          + 'exists. File will be overwritten.')
+            saveto.unlink()
+        else:
+            raise Exception('Merged plate and drug metadata file ' +
+                          '{} already exists. Nothing to do here.'.format(saveto) +
+                          'If you want to recompile the plate metadata,'
+                          'rename or delete the exisiting file or set' +
+                          'del_if_exists to True.')
+
+    complete_plate_metadata = pd.merge(
+        plate_metadata, drug_metadata, on=merge_on,
+        how='outer')
+
+    if saveto is not None:
+        complete_plate_metadata.to_csv(saveto, index=False)
+
+    return complete_plate_metadata
+
+
+#%% Experiments using OPENTRONS
 def merge_robot_metadata(
         sourceplates_file, randomized_by='column', saveto=None,
         drug_by_column=True,
@@ -195,116 +590,7 @@ def merge_robot_metadata(
 
     return drug_metadata
 
-#%%
-def populate_96WPs(worm_sorter,
-                   n_columns=12,
-                   n_rows=8,
-                   saveto=None,
-                   del_if_exists=False
-                   ):
-    """
-    @author: ilbarlow
 
-    Function to explode and make dataframes/csvs from wormsorter input files.
-    Works with plates that have been filled row-wise and column-wise
-    consecutively
-
-    Parameters
-    ----------
-    worm_sorter : .csv file with headers 'start_well', 'end_well' and details
-    of strains in range of wells.
-    saveto : None or path or default
-        DESCRIPTION. The default is None.
-    del_if_exists : Bool, optional
-        DESCRIPTION. The default is False.
-
-    Returns
-    -------
-    plate_metadata: one line per well; can be used in get_day_metadata
-            function to compile with manual metadata
-
-
-    """
-    import string
-    worm_sorter = Path(worm_sorter)
-
-    DATE = worm_sorter.stem.split('_')[0]
-    wormsorter_log_fname = worm_sorter.parent / '{}_wormsorter_errorlog.txt'.format(DATE)
-    wormsorter_log_fname.touch()
-
-    # parameters for the plates
-    column_names = np.arange(1, n_columns+1)
-    row_names = list(string.ascii_uppercase[0:n_rows])
-    well_names = [i+str(b) for i in row_names for b in column_names]
-    total_nwells = len(well_names)
-
-    print('Total number of wells: {}'.format(total_nwells))
-
-    # checking if and where to save the file
-    if saveto == None:
-        print ('plate metadata file will not be saved')
-
-    else:
-        try:
-            Path(saveto).touch()
-        except FileNotFoundError:
-            print ('saveto file invalid, saving to default filename')
-            saveto = 'default'
-
-        if saveto == 'default':
-            saveto = Path(worm_sorter).parent / ('{}_plate_metadata.csv'.format(DATE))
-            print ('saving to {}'.format(saveto))
-    if (saveto is not None) and (saveto.exists()):
-        if del_if_exists:
-            warnings.warn('\nPlate metadata file {} already '.format(saveto)
-                          + 'exists. File will be overwritten.')
-            saveto.unlink()
-        else:
-            warnings.warn('\nPlate metadata file {} already '.format(saveto)
-                          + 'exists. Nothing to do here. If you want to '
-                          + 'recompile the wormsorter metadata, rename or delete the '
-                          + 'exisiting file.')
-            return None
-
-    # import worm_sorter metadata and find the start and end rows and columns
-    worm_sorter_df = pd.read_csv(worm_sorter)
-    worm_sorter_df = worm_sorter_df.dropna(axis=0, how='all')
-    worm_sorter_df['start_row'] = row_from_well(worm_sorter_df.start_well)
-    worm_sorter_df['end_row'] = row_from_well(worm_sorter_df.end_well)
-    worm_sorter_df['row_range'] = [[chr(c) for c in np.arange(ord(r.start_row),
-                                                              ord(r.end_row)+1)]
-                                   for i, r in worm_sorter_df.iterrows()]
-    worm_sorter_df['start_column'] = column_from_well(worm_sorter_df.start_well)
-    worm_sorter_df['end_column'] = column_from_well(worm_sorter_df.end_well)
-    worm_sorter_df['column_range'] = [list(np.arange(r.start_column,
-                                                 r.end_column+1))
-                                      for i, r in worm_sorter_df.iterrows()]
-
-    worm_sorter_df['well_name'] = [[i+str(b) for i in r.row_range
-                                    for b in r.column_range]
-                                for i, r in worm_sorter_df.iterrows()]
-
-    plate_metadata = explode_df(worm_sorter_df, 'well_name')
-
-    # do check to make sure there aren't multiple  plates
-    plate_errors =  []
-    unique_plates = plate_metadata['imaging_plate_id'].unique()
-    for plate in unique_plates:
-        if plate_metadata[plate_metadata['imaging_plate_id'] == plate].shape[0] > total_nwells:
-            warnings.warn('{}: more than {} wells'.format(plate, total_nwells))
-            plate_errors.append(plate)
-            with open(wormsorter_log_fname, 'a') as fid:
-                fid.write(plate + '\n')
-    if len(plate_errors) == 0:
-        with open(wormsorter_log_fname, 'a') as fid:
-            fid.write ('No wormsorter plate errors \n')
-
-    plate_metadata.to_csv(saveto, index=False)
-
-    return plate_metadata
-
-
-# %%extra function if using both robot and wormsorter
 def merge_robot_wormsorter(day_root_dir,
                            drug_metadata,
                            plate_metadata,
@@ -406,185 +692,8 @@ def merge_robot_wormsorter(day_root_dir,
     return complete_plate_metadata
 
 
-#%%
-# STEP 2
-def get_camera_serial(
-        metadata, n_wells=96
-        ):
-    """
-    @author: em812
-    Get the camera serial number from the well_name and instrument_name.
 
-    param:
-        metadata: pandas dataframe
-            Dataframe with day metadata
-
-    return:
-        out_metadata: pandas dataframe
-            Day metadata dataframe including camera serial
-
-    """
-    from tierpsytools.hydra import CAM2CH_df,UPRIGHT_96WP
-
-    if n_wells != 96:
-        raise ValueError('Only 96-well plates supported at the moment.')
-
-    channels = ['Ch{}'.format(i) for i in range(1,7,1)]
-
-    WELL2CH = []
-    for ch in channels:
-        chdf = pd.DataFrame(UPRIGHT_96WP[ch].values.reshape(-1,1),
-                            columns=['well_name'])
-        chdf['channel'] = ch
-        WELL2CH.append(chdf)
-    WELL2CH = pd.concat(WELL2CH,axis=0)
-
-    WELL2CAM = pd.merge(
-            CAM2CH_df,WELL2CH,
-            how='outer',on='channel'
-            ).sort_values(by=['rig','channel','well_name'])
-    # keep only the instruments that exist in the metadata
-    WELL2CAM = WELL2CAM[WELL2CAM['rig'].isin(metadata['instrument_name'])]
-
-    # Rename 'rig' to 'instrument_name'
-    WELL2CAM = WELL2CAM.rename(columns={'rig':'instrument_name'})
-
-    # Add camera number to metadata
-    out_metadata = pd.merge(
-            metadata,WELL2CAM[['instrument_name','well_name','camera_serial']],
-            how='outer',left_on=['instrument_name','well_name'],
-            right_on=['instrument_name','well_name']
-            )
-    if not out_metadata.shape[0] == metadata.shape[0]:
-        raise Exception('Wells missing from plate metadata.')
-
-    if not all(~out_metadata['camera_serial'].isna()):
-        raise Exception('Camera serial not found for some wells.')
-
-    return out_metadata
-
-def get_day_metadata(
-        complete_plate_metadata, manual_metadata_file,
-        merge_on=['imaging_plate_id'], n_wells=96,
-        run_number_regex=r'run\d+_',
-        saveto=None,
-        del_if_exists=False, include_imgstore_name = True, raw_day_dir=None
-        ):
-    """
-    @author: em812
-    Incorporates the robot metadata and the manual metadata of the hydra rigs
-    to get all the metadata for a given day of experiments.
-    Also, it adds the imgstore_name of the hydra vidoes.
-
-    param:
-        complete_plate_metadata: pandas dataframe
-                Dataframe containing the metadata for all the
-                wells of each imaging plate (If the robot was used, then this
-                is the complete_plate_metadata obtained by the
-                merge_robot_wormsorter function)
-        manual_metadata: .csv file path
-                File with the details of rigs and runs
-                (see README for minimum required fields)
-        merge_on: column name or list of columns
-                Column(s) in common in complete_plate_metadata and
-                manual_metadata, that can be used to merge them
-        run_number_regex: regex defining the format of the run number in
-                in the raw video file names. Default translates to 'run#_'.
-        n_wells: integer
-                number of wells in imaging plate
-        saveto: .csv file path
-                File path to save the day metadata in (if None, the
-                metadata are saved in the same folder as the manual metadata)
-        del_if_exists: boolean
-                If True and the metadata file exists in the defined
-                path, the existing file will be deleted and a new file will be
-                created. If False, the operation will be aborted and a warning
-                will be produced.
-        include_imgstore_name: boolean
-                If True, the function will call the add_imgstore_name function
-                to look in the raw_day_dir and get the imgstore names for each
-                row in the metadata.
-        raw_day_dir: directory path
-                Path of the directory containing the RawVideos for the
-                specific day of experiments. It is used to get the imgstore
-                names. If None, then the standard file structure is assumed,
-                and the path is obtained by the path of the auxiliary files
-                for the specific day, by replacing AuxiliaryFile by RawVideos.
-
-    return:
-        metadata: pandas dataframe
-            dataframe with day metadata
-    """
-    from tierpsytools.hydra.hydra_helper import get_date_of_runs_from_aux_files
-
-    manual_metadata_file = Path(manual_metadata_file)
-
-    #find the date of the hydra experiments
-    date_of_runs = get_date_of_runs_from_aux_files(manual_metadata_file)
-
-    aux_day_dir = manual_metadata_file.parent
-    if saveto is None:
-        saveto = aux_day_dir / '{}_day_metadata.csv'.format(date_of_runs)
-
-    if saveto.exists():
-        if  del_if_exists:
-            warnings.warn('\n\nMetadata file {} already exists.'.format(saveto)
-                          +' File will be overwritten.\n\n')
-            saveto.unlink()
-        else:
-            warnings.warn('\n\nMetadata file {} already exists.'.format(saveto)
-                          +' Nothing to do here.\n\n')
-            return
-
-    manual_metadata = pd.read_csv(manual_metadata_file, index_col=False)
-
-    if 'date_yyyymmdd' not in manual_metadata.columns:
-        manual_metadata['date_yyyymmdd'] = str(date_of_runs)
-
-
-    # make sure there is overlap in the image_plate_id
-    if not np.all(
-            np.isin(complete_plate_metadata[merge_on],manual_metadata[merge_on])
-            ):
-        warnings.warn('There are {} values in the imaging '.format(merge_on)
-                    +'plate metadata that do not exist in the manual '
-                    +'metadata. These plates will be dropped from the day'
-                    +'metadata file.')
-
-    # merge two dataframes
-    metadata = pd.merge(
-            complete_plate_metadata, manual_metadata, how='inner',
-            left_on=merge_on,right_on=merge_on,indicator=False
-            )
-
-    # clean up and rearrange
-    metadata.rename(columns={'destination_well':'well_name'}, inplace=True)
-
-    # add imgstore name
-    if include_imgstore_name:
-        if raw_day_dir is None:
-            raw_day_dir = Path(
-                    str(aux_day_dir).replace('AuxiliaryFiles','RawVideos')
-                    )
-        if raw_day_dir.exists:
-            metadata = add_imgstore_name(
-                    metadata, raw_day_dir, n_wells=n_wells,
-                    run_number_regex=run_number_regex
-                    )
-            #check_dates_in_yaml(metadata,raw_day_dir)
-        else:
-            warnings.warn("\nRawVideos day directory was not found. "
-                          +"Imgstore names cannot be added to the metadata.\n",
-                          +"Path {} not found.".format(raw_day_dir)
-                          )
-
-    # Save to csv file
-    print('Saving metadata file: {} '.format(saveto))
-    metadata.to_csv(saveto, index=False)
-
-    return metadata
-
-# %% Check day metadata is the correct side
+# %% CHECKS
 def day_metadata_check(day_metadata, day_root_dir, plate_size=96):
 
     """@author: ibarlow
@@ -631,7 +740,7 @@ def day_metadata_check(day_metadata, day_root_dir, plate_size=96):
             return files_to_check
 
 
-# %%
+
 def number_wells_per_plate(day_metadata, day_root_dir):
     """
     author @ibarlow
@@ -670,71 +779,7 @@ def number_wells_per_plate(day_metadata, day_root_dir):
     return plate_summary_df
 
 
-#%%
-# STEP 3:
-def concatenate_days_metadata(
-        aux_root_dir, list_days=None, saveto=None
-        ):
-    """
-    @author: em812
-    Reads all the yyyymmdd_day_metadata.csv files from the different days of
-    experiments and creates a full metadata file all_metadata.csv.
 
-    param:
-        aux_root_dir: path to directory
-            Root AuxiliaryFiles directory containing all the folders
-            for the individual days of experiments
-        list_days: list like object
-            List of folder names (experiment days) to read from.
-            If None (default), it reads all the subfolders in the root_dir.
-        saveto: path to .csv file
-            Filename where all compiled metadata will be saved
-
-    return:
-        all_meta: compiled metadata dataframe
-    """
-
-    date_regex = r"\d{8}"
-    aux_root_dir = Path(aux_root_dir)
-
-    if saveto is None:
-        saveto = aux_root_dir.joinpath('metadata.csv')
-
-    if list_days is None:
-        list_days = [d for d in aux_root_dir.glob("*") if d.is_dir()
-                    and re.search(date_regex, str(d)) is not None]
-
-    ## Compile all metadata from different days
-    meta_files = []
-    for day in list_days:
-        ## Find the correct day_metadata file
-        auxfiles = [file for file in aux_root_dir.joinpath(day).glob('*_day_metadata.csv')]
-
-        # checks
-        if len(auxfiles) > 1:
-            is_ok = np.zeros(len(auxfiles)).dtype(bool)
-            for ifl,file in enumerate(auxfiles):
-                if len(file.stem.replace('_day_metadata',''))==8:
-                    is_ok[ifl]=True
-            if np.sum(is_ok)==1:
-                auxfiles = [file
-                            for ifl,file in enumerate(auxfiles)
-                            if is_ok[ifl]]
-            else:
-                raise ValueError('More than one *_day_metatada.csv files found'
-                                 +'in {}. Compilation '.format()
-                                 +'of metadata is aborted.')
-
-        meta_files.append(auxfiles[0])
-
-    all_meta = []
-    for file in meta_files:
-        all_meta.append(pd.read_csv(file))
-
-    all_meta = pd.concat(all_meta,axis=0)
-    all_meta.to_csv(saveto,index=False)
-
-    return all_meta
 
 #%%
 if __name__ == '__main__':

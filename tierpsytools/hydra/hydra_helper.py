@@ -9,6 +9,62 @@ import re
 import numpy as np
 import pandas as pd
 
+def get_camera_serial(
+        metadata, n_wells=96
+        ):
+    """
+    @author: em812
+    Get the camera serial number from the well_name and instrument_name.
+
+    param:
+        metadata: pandas dataframe
+            Dataframe with day metadata
+
+    return:
+        out_metadata: pandas dataframe
+            Day metadata dataframe including camera serial
+
+    """
+    from tierpsytools.hydra import CAM2CH_df,UPRIGHT_96WP
+
+    if n_wells != 96:
+        raise ValueError('Only 96-well plates supported at the moment.')
+
+    channels = ['Ch{}'.format(i) for i in range(1,7,1)]
+
+    WELL2CH = []
+    for ch in channels:
+        chdf = pd.DataFrame(UPRIGHT_96WP[ch].values.reshape(-1,1),
+                            columns=['well_name'])
+        chdf['channel'] = ch
+        WELL2CH.append(chdf)
+    WELL2CH = pd.concat(WELL2CH,axis=0)
+
+    WELL2CAM = pd.merge(
+            CAM2CH_df,WELL2CH,
+            how='outer',on='channel'
+            ).sort_values(by=['rig','channel','well_name'])
+    # keep only the instruments that exist in the metadata
+    WELL2CAM = WELL2CAM[WELL2CAM['rig'].isin(metadata['instrument_name'])]
+
+    # Rename 'rig' to 'instrument_name'
+    WELL2CAM = WELL2CAM.rename(columns={'rig':'instrument_name'})
+
+    # Add camera number to metadata
+    out_metadata = pd.merge(
+            metadata,WELL2CAM[['instrument_name','well_name','camera_serial']],
+            how='outer',left_on=['instrument_name','well_name'],
+            right_on=['instrument_name','well_name']
+            )
+    if not out_metadata.shape[0] == metadata.shape[0]:
+        raise Exception('Wells missing from plate metadata.')
+
+    if not all(~out_metadata['camera_serial'].isna()):
+        raise Exception('Camera serial not found for some wells.')
+
+    return out_metadata
+
+
 def add_imgstore_name(
         metadata, raw_day_dir, n_wells=96, run_number_regex=r'run\d+_'
         ):
