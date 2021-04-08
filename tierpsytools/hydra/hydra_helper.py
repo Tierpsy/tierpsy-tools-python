@@ -8,6 +8,7 @@ Created on Mon Dec  2 15:29:20 2019
 import re
 import numpy as np
 import pandas as pd
+import warnings
 
 def get_camera_serial(
         metadata, n_wells=96
