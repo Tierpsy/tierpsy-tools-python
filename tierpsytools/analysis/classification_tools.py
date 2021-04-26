@@ -236,8 +236,10 @@ def plot_confusion_matrix(
     from sklearn.metrics import confusion_matrix
     from sklearn.utils.multiclass import unique_labels
     from mpl_toolkits.axes_grid1 import make_axes_locatable
-    plt.rcParams['svg.fonttype'] = 'none'
-    plt.rcParams['font.sans-serif'] = 'Arial'
+    rc_params = {
+            'font.sans-serif': "Arial",
+            'svg.fonttype': 'none',
+            }
 
 #    if not title:
 #        if normalize:
@@ -306,6 +308,7 @@ def plot_confusion_matrix(
     fig.tight_layout()
 
     if saveto is not None:
-        plt.savefig(saveto)
+        with plt.rc_context(rc_params):
+            plt.savefig(saveto)
         plt.close()
     return
