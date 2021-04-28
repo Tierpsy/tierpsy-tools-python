@@ -32,7 +32,14 @@ def fix_dtypes(df):
     intcols = [c for c in cols if ('number' in c) or ('slot' in c)]
 
     for c in strcols:
-        df[c] = df[c].astype(int).astype(str)
+        if df[c].isna().all():
+            continue
+        try:
+            df[c] = df[c].astype(int).astype(str)
+        except Exception as e:
+            raise Exception(
+                'failed to convert - check for nans').with_traceback(
+                    e.__traceback__)
     for c in intcols:
         if df[c].isna().all():
             continue
@@ -171,7 +178,8 @@ def get_row_info(row):
     # light plot
     fig, ax = plt.subplots(figsize=(4, 1.2))
     ed_df['light'].plot(
-        ylabel='light', ax=ax, ylim=(0.1, 9000), logy=True)
+        ax=ax, ylim=(0.1, 9000), logy=True)
+    ax.set_ylabel('light')
     fig.tight_layout()
     light_str = encode_fig_for_html(fig)
     # temp plot
