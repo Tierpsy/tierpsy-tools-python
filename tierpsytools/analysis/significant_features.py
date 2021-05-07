@@ -67,6 +67,8 @@ def k_significant_feat(
     if isinstance(k,str):
         if k=='all':
             k = feat.shape[1]
+        else:
+            raise Exception('Data type for k not recognized.')
 
     # Find most significant features
     if isinstance(score_func, str):
@@ -90,7 +92,9 @@ def k_significant_feat(
     skb.fit(feat_scaled, y_class)
 
     support = skb.get_support()
-    top_ft_ids = np.flip(np.argsort(skb.scores_))[:k]
+    sorted_scores = np.sort(skb.scores_)
+    ids_sorted_scores = np.argsort(skb.scores_)
+    top_ft_ids = np.flip(ids_sorted_scores[~np.isnan(sorted_scores)])[:k]
     scores = skb.scores_[top_ft_ids]
     if hasattr(skb, 'pvalues_'):
         pvalues = skb.pvalues_[top_ft_ids]

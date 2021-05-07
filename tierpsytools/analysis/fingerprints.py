@@ -35,6 +35,29 @@ class tierpsy_fingerprints():
         return
 
     def fit(self, X, y, control='N2', n_jobs=-1):
+        """
+        Get the tierpsy fingerprint:
+            Run univariate statistical tests if not provided as input
+            Create profile: group and subgroup features and get the stat summaries
+                for each group/subgroup
+
+        Parameters
+        ----------
+        X : pandas dataframe
+            features matrix.
+        y : pandas series or numpy array
+            the labels defining the sample groups to compare (must contain control label).
+        control : str, optional
+            The control group label. The default is 'N2'.
+        n_jobs : int or -1, optional
+            number of jobs for parallel processing. Used only if univariate tests
+            are ran. The default is -1 (all available cores).
+
+        Returns
+        -------
+        None.
+
+        """
         if not hasattr(self, 'test_results'):
             self._run_univariate_tests(X, y, control='N2', n_jobs=-1)
         self._create_profile()
@@ -57,7 +80,7 @@ class tierpsy_fingerprints():
             return represent_feat
 
 
-    def get_profile(self, merge_bluelight=False):
+    def get_profile(self, feat_set=None, merge_bluelight=False):
         if not hasattr(self, '_profile'):
             raise ValueError('You must fit the instance first.')
 
@@ -103,9 +126,29 @@ class tierpsy_fingerprints():
                 c = plt.colorbar(g, orientation='horizontal', cax=cbar_ax) #  fig.colorbar(im, cax=cbar_ax)
                 c.set_label('ratio of significant features') #, labelpad=-40, y=1.15, rotation=0)
 
-        return
+        return g
 
     def _plot_one_fingerprint(self, data, title, ax):
+        """
+        Plots a signle heatmap with the effect sizes of a set of representative
+        features (fingerprint). The set comes from a single bluelight condition
+        or the merged profile.
+
+        Parameters
+        ----------
+        data : pandas dataframe
+            the results from a single bluelight condition or the merges profile.
+        title : str
+            the title of the plot/subplot.
+        ax : matplotlib axes object
+            the axes object to plot the heatmap in.
+
+        Returns
+        -------
+        g : seaborn figure object
+            the heatmap figure object.
+
+        """
         import seaborn as sns
 
         data = data[data['best_group']]
@@ -218,6 +261,28 @@ class tierpsy_fingerprints():
         return
 
     def _profile_info(self, res, groupby, n_boot=1000):
+        """
+        Gets stat summaries for effect sizes and number of significant features
+        for each subgroup and stores them in the profile dataframe.
+
+        Parameters
+        ----------
+        res : pandas dataframe
+            Dataframe with the results of the univariate statistical tests
+            (p-values and effect sizes). It also includes the group and subgroup
+            labels for each feature.
+        groupby : list of strings
+            The group and subgroup labels and the bluelight label if applicable.
+        n_boot : int, optional
+            number of bootstrap samples for the stats estimates. The default is 1000.
+
+        Returns
+        -------
+        profile : pandas dataframe
+            summary stats of effect sizes and number of significant features
+            per features subgroup.
+
+        """
         from tierpsytools.analysis.statistical_tests import bootstrapped_ci as boot_ci
         grouped_res = res.groupby(by=groupby)
 
@@ -301,3 +366,4 @@ class tierpsy_fingerprints():
         if feat_set is not None:
             fts = [ft for ft in fts if ft in feat_set]
         return fts
+

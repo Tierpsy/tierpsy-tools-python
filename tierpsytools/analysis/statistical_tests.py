@@ -29,17 +29,29 @@ def univariate_tests(
         feature matrix.
     y : array-like
         labes of the samples for the comparison.
-    comparison_type : string, optional
-        ['multiclass', 'binary_each_class']. The default is 'multiclass'.
     control : float, optional. The default is .0.
-        The drug_dose entry for the control points.
-        Must provide control dose if the comparison_type is 'binary_each_group'.
-    test : TYPE, optional
-        DESCRIPTION. The default is 'ANOVA'.
+        The y entry for the control points.
+        Must provide control y if the comparison_type is 'binary_each_group'.
+    test : str, optional
+        Type of statistical test to perform. The options are:
+        'ANOVA', 'Kruskal-Wallis', 'Mann-Whitney test' or 't-test'.
+        The default is 'ANOVA'.
+    comparison_type : string, optional
+        The type of comparison to make. This parameter is ignored if there are
+        only two unique groups in y.
+        The options are:
+            'multiclass': perform comparison among all the unique groups in y.
+            Compatible with tests that can handle more than two groups ('ANOVA', 'Kruskal)
+            'binary_each_class': compare independently each group with the
+            control group and return all p-values from the different comparisons.
+            Compatible with all tests.
+        The default is 'multiclass'.
     multitest_correction : string or None, optional
-        DESCRIPTION. The default is 'alpha_by'.
-    alpha : TYPE, optional
-      alpha  DESCRIPTION. The default is 0.05.
+        Method to use to correct p-values for multiple comparisons. The options
+        are the ones available in statsmodels.stats.multitest.multipletests.
+        The default is 'fdr_by'.
+    alpha : float, optional
+        The significant level for the corrected p-values. The default is 0.05.
 
     Raises
     ------
@@ -48,10 +60,12 @@ def univariate_tests(
 
     Returns
     -------
-    TYPE
-        DESCRIPTION.
-    TYPE
-        DESCRIPTION.
+    stats:
+
+    pvals:
+        The p-values for all the comparisons made.
+    reject: array of bool
+        A mask array defining the significant comparisons.
 
     """
     from scipy.stats import kruskal, mannwhitneyu, f_oneway, ttest_ind
