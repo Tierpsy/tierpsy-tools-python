@@ -1,8 +1,8 @@
-## Input files required to compile hydra metadata
+# Input files required to compile hydra metadata
 
 ATTENTION: All field names should not contain any space (use underscores instead) nor special symbols.
 
-# Manual metadata file:
+## Manual metadata file:
 To be compiled manually during experiment. Contains all the plate-specific information (that are not related to the contents of individual wells) for every experimental run in a specific day.
 
 Name of the file:
@@ -23,7 +23,7 @@ Fields:
 
 Plus any other imaging-plate-specific metadata you want to record (e.g experimenter, room temperature and humidity).
 
-# Source plate metadata file:
+## Source plate metadata file:
 Name of the file:
     `YYYYMMDD_sourceplates.csv`
 
@@ -54,7 +54,7 @@ For example, for drug screenings you need:
 For food-related screenings you need bacteria_strain, ect.
 The field name should not contain any space (use underscores instead) nor special symbols.
 
-# Source plate to imgaging plate mapping:
+## Source plate to imgaging plate mapping:
 To be compiled manually during experiment. Defines the source plate used to create each imaging plate.
 
 Name of the file:
@@ -68,7 +68,7 @@ Only two fields required:
 
 Note: This format assumes that the source plate is replicated exactly as is to create the imaging plate. If any shuffling is done between source plate and imaging plate (without the opentron), then this must be taken into account with another file. This option has not been implemented yet.
 
-# Wormsorter file:
+## Wormsorter file:
 To be compiled manually during experiment. Contains well-specific information for every imaging plate used in a given tracking day.
 This file should not contain information about the experimental runs (run number, hydra number, time, temperature etc) - this information is recorded in the manual_metadata file.
 Instead, it should contain all the basic well-specific metadata for the imaging plates which are not recorded in the sourceplate file: information about the worms put in each well (worm strain, number of worms, days_in_diapause,...) and the media.
@@ -84,7 +84,7 @@ Fields:
 3. `media_type`
 ...
 
-## Compiling metadata
+# Compiling metadata
 
 There are two main steps in compiling the metadata:
 1. Create complete imaging plate metadata (complete_plate_metadata), which will contain all the information for every well of every imaging plate in a given day.
