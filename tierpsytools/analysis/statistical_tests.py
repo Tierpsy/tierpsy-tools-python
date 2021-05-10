@@ -42,7 +42,7 @@ def univariate_tests(
         The options are:
             'multiclass': perform comparison among all the unique groups in y.
             Compatible with tests that can handle more than two groups ('ANOVA', 'Kruskal)
-            'binary_each_class': compare independently each group with the
+            'binary_each_group': compare independently each group with the
             control group and return all p-values from the different comparisons.
             Compatible with all tests.
         The default is 'multiclass'.
@@ -68,11 +68,13 @@ def univariate_tests(
         A mask array defining the significant comparisons.
 
     """
-    from scipy.stats import kruskal, mannwhitneyu, f_oneway, ttest_ind
-    from functools import partial
+    from tierpsytools.analysis.statistical_tests_helper import get_test_fun
 
     if not np.isin(control, np.array(y)):
         raise ValueError('control not found in the y array.')
+
+    if np.unique(y).shape[0]<2:
+        raise Exception('Only one group found in y. Nothing to compare with.')
 
     if test.startswith('Mann') or test == 't-test':
         if comparison_type=='multiclass' and np.unique(y).shape[0]>2:
@@ -83,49 +85,13 @@ def univariate_tests(
             binary_each_dose comparison_method instead.
                 """. format(test))
         else:
-            comparison_type = 'binary_each_class'
+            comparison_type = 'binary_each_group'
 
     if not isinstance(X, pd.DataFrame):
         X = pd.DataFrame(X)
 
-    # Local function for parallel processing of univariate tests for each drug
-    def stats_test(X, y, test, **kwargs):
-        from joblib import Parallel, delayed
-
-        def _one_fit(ift, samples, **kwargs):
-            samples = [s[~np.isnan(s)] for s in samples if not all(np.isnan(s))]
-            # TODO
-            if len(samples)<2: # if only one group --> put it outside
-                return ift, (np.nan, np.nan)
-            return ift, test(*samples, **kwargs)
-
-        parallel = Parallel(n_jobs=n_jobs, verbose=True)
-        func = delayed(_one_fit)
-
-        try:
-            res = parallel(
-                func(ift, [sample[:,ift]
-                      for sample in [np.array(X[y==iy]) for iy in np.unique(y)]],
-                     **kwargs)
-                for ift in range(X.shape[1]))
-        except:
-            pdb.set_trace()
-
-        order = [ift for ift,(r,p) in res]
-        rs = np.array([r for ift,(r,p) in res])
-        ps = np.array([p for ift,(r,p) in res])
-
-        return rs[order], ps[order]
-
     # Create the function that will test every feature of a given drug
-    if test == 'ANOVA':
-        func = partial(stats_test, test=f_oneway)
-    elif test.startswith('Kruskal'):
-        func = partial(stats_test, test=kruskal, nan_policy='raise')
-    elif test.startswith('Mann-Whitney'):
-        func = partial(stats_test, test=mannwhitneyu)
-    if test == 't-test':
-        func = partial(stats_test, test=ttest_ind)
+    func = get_test_fun(test)
 
     # For each dose get significant features
     if comparison_type=='multiclass':
@@ -133,7 +99,7 @@ def univariate_tests(
         pvals = pd.DataFrame(pvals.T, index=X.columns, columns=[test])
         stats = pd.DataFrame(stats.T, index=X.columns, columns=[test])
 
-    elif comparison_type=='binary_each_class':
+    elif comparison_type=='binary_each_group':
         groups = np.unique(y[y!=control])
 
         pvals=[]
@@ -155,8 +121,8 @@ def univariate_tests(
     return stats, pvals, reject
 
 def get_effect_sizes(
-        X, y, control='N2',
-        test='ANOVA', comparison_type='multiclass'
+        X, y, control='N2', effect_type=None,
+        linked_test='ANOVA', comparison_type='multiclass'
         ):
     """
     Get the effect sizes of statistical comparisons between groups defined in y.
@@ -169,15 +135,48 @@ def get_effect_sizes(
         The dependent variable - the variable that defines the groups to compare.
     control : str
         The group in y which is considered the control group.
+    effect_type : str or None, optional
+        The type of effect size to calculate.
+        Available options are: 'eta_squared', 'cohen_d', 'cliffs_delta'.
+        If None, the type of effect size will be decided using the linked_test
+        parameter.
+        Default is None.
+    linked_test : str, optional
+        This parameter, together with the comparison_type, will define the type
+        of effect size that will be calculated, if the effect_type parameter is None.
+        With this parameter the user can define the statistical test for which
+        they want an effect size.
+        For example, if the linked_test is 'ANOVA', this means that we want to
+        compare two or more groups and see if any of them is different than the others.
+        For this type of comparison, we would estimate the eta_squared effect size.
+        Available options are:
+        'Mann-Whitney', 'Kruskal-Wallis', 'ANOVA', 't-test'.
+        When the effect_type parameter is defined (when it is not None), then this
+        parameter is ignored.
+        The default is 'ANOVA'.
     comparison_type : str, optional
-        'multiclass' or 'binary_each_group'. The default is 'multiclass'.
+        Available options are: 'multiclass' or 'binary_each_group'.
+        This parameter is required only when the effect_type is eta_squared
+        or when the effect_type is None and the linked_test is 'ANOVA'. In any other
+        case, this parameter is ignored.
         When 'multiclass', the null hypothesis is that all groups come from the same
         distribution, the alternative hypothesis is that at least one of them
-        comes from a different distribution.
+        comes from a different distribution. One effect type will be estimated,
+        regardless the number of groups in y.
         When 'binary_each_group', then each group will be compared with the control
-        group defined in the 'control' parameter.
-    test : str, optional
-        Mann-Whitney', 'Kruskal-Wallis', 'ANOVA' or 't-test'. The default is 'ANOVA'.
+        group defined in the 'control' parameter. One separate effect size will
+        be returned for each group.
+        The default is 'multiclass'.
+
+    The following table is a guide to the correspondance between effect size
+    type and statistical tests :
+            linked_test    |  comparison_type     |   effect_type
+            -------------------------------------------------------
+            ANOVA          |  binary_each_group   |   eta_squared
+            ANOVA          |  multiclass          |   eta_squared
+            t-test         |  N/A                 |   cohen_d
+            Kruskal-Wallis |  N/A                 |   cliffs_delta
+            'Mann-Whitney' |  N/A                 |   cliffs_delta
 
     Raises
     ------
@@ -186,150 +185,78 @@ def get_effect_sizes(
 
     Returns
     -------
-    TYPE
-        DESCRIPTION.
-    TYPE
-        DESCRIPTION.
+    effect : dataframe
+        The effect sizes estimated for each feature.
 
     """
+    from tierpsytools.analysis.statistical_tests_helper import \
+        eta_squared_ANOVA, cohen_d, cliffs_delta
+
     if not np.isin(control, np.array(y)):
         raise ValueError('control not found in the comparison_variable array.')
-
-    if comparison_type=='multiclass' and np.unique(y).shape[0]>2:
-        if test.startswith('Mann') or test == 't-test':
-            raise ValueError(
-                """
-            The Mann-Whitney test cannot be used to compare between
-            more than two groups. Use a different test or the
-            binary_each_dose comparison_method instead.
-                """)
 
     if not isinstance(X, pd.DataFrame):
         X = pd.DataFrame(X)
 
     groups = np.unique(y[y!=control])
 
-    # For each dose get significant features
-    if test=='ANOVA' and comparison_type=='multiclass':
-        effect = pd.Series(index=X.columns)
-        samples = [x for ix,x in X.groupby(by=y)]
-        for ft in X.columns:
-            effect[ft] = eta_squared_ANOVA(*[s.loc[~s[ft].isna(), ft] for s in samples])
-        effect = pd.DataFrame(effect, columns=['_'.join([test,'effect_size'])])
+    # Get the effect_type based on linked_test
+    if effect_type is None:
+        if not isinstance(linked_test,str):
+            raise Exception('Input type is not recognised for the linked_test '+
+                            'parameter. See available options in docstring.')
+        elif linked_test=='ANOVA':
+            effect_type = 'eta_squared'
+        elif linked_test == 't-test':
+            effect_type = 'cohen_d'
+        elif linked_test.startswith('Kruskal') or linked_test.startswith('Mann'):
+            effect_type = 'cliffs_delta'
+        else:
+            raise Exception('Input not recognised for the linked_test parameter. '+
+                            'See available options in the function docstring.')
+    elif not np.isin(effect_type, ['eta_squared', 'cohen_d', 'cliffs_delta']):
+        raise Exception('Input not recognised for the effect_type parameter. '+
+                        'See available options in the function docstring.')
 
-    elif test=='t-test':
+    # Get the effect sizes for each type of test
+    if effect_type == 'eta_squared':
+        if comparison_type=='multiclass':
+            effect = pd.Series(index=X.columns)
+            samples = [x for ix,x in X.groupby(by=y)]
+            for ft in X.columns:
+                effect[ft] = eta_squared_ANOVA(*[s.loc[~s[ft].isna(), ft] for s in samples])
+            effect = pd.DataFrame(effect, columns=[effect_type])
+            return effect
+        elif comparison_type=='binary_each_group':
+            effect = pd.DataFrame(index=X.columns, columns=groups)
+            for igrp, grp in enumerate(groups):
+                mask = np.isin(y,[control, grp])
+                samples = [x for ix,x in X[mask].groupby(by=y[mask])]
+                for ft in X.columns:
+                    effect.loc[ft, grp] = eta_squared_ANOVA(
+                        *[s.loc[~s[ft].isna(), ft] for s in samples])
+
+    elif effect_type =='cohen_d':
         effect = {}
         for igrp, grp in enumerate(groups):
             mask = np.isin(y,[control, grp])
-            effect[grp] = cohen_d(*[x for ix,x in X[mask].groupby(by=y)])
+            effect[grp] = cohen_d(*[x for ix,x in X[mask].groupby(by=y[mask])])
         effect = pd.DataFrame(effect, index=X.columns)
+        return effect
 
-    else:
-        if test=='Mann-Whitney' or test=='Kruskal-Wallis':
-            func = cliffs_delta
-        elif test=='ANOVA':
-            func = eta_squared_ANOVA
-
+    elif effect_type == 'cliffs_delta':
         effect = pd.DataFrame(index=X.columns, columns=groups)
         for igrp, grp in enumerate(groups):
             mask = np.isin(y,[control, grp])
-            samples = [x for ix,x in X[mask].groupby(by=y)]
+            samples = [x for ix,x in X[mask].groupby(by=y[mask])]
             for ft in X.columns:
-                effect.loc[ft, grp] = func(*[s.loc[~s[ft].isna(), ft] for s in samples])
+                effect.loc[ft, grp] = cliffs_delta(
+                    *[s.loc[~s[ft].isna(), ft] for s in samples])
 
     return effect
 
-#%% Effect size functions
-def cohen_d(x,y, axis=0):
-    """ Return the cohen d effect size for t-test
-
-    """
-    from numpy import nanstd, nanmean, sqrt
-
-    x = np.array(x)
-    y = np.array(y)
-
-    if len(x.shape)==1:
-        nx = len(x)
-        ny = len(y)
-        dof = nx + ny - 2
-        return (nanmean(y) - nanmean(x)) / sqrt(((nx-1)*nanstd(x, ddof=1) ** 2 + (ny-1)*nanstd(y, ddof=1) ** 2) / dof)
-    elif len(x.shape)==2:
-        if axis not in [0,1]:
-            raise Exception('Axis out of range.')
-        nx = x.shape[axis]
-        ny = y.shape[axis]
-        dof = nx + ny - 2
-        return (nanmean(y,axis=axis) - nanmean(x,axis=axis)) / \
-            sqrt(((nx-1)*nanstd(x, axis=axis, ddof=1) ** 2 + (ny-1)*nanstd(y, axis=axis, ddof=1) ** 2) / dof)
-    else:
-        raise Exception('Samples must be 1D or 2D.')
-
-
-def eta_squared_ANOVA( *args):
-    """ Return the eta squared as the effect size for ANOVA
-
-    """
-    return( float( __ss_between_( *args) / __ss_total_( *args)))
-
-def cliffs_delta(lst1, lst2):
-
-    """Returns delta and true if there are more than 'dull' differences"""
-    m, n = len(lst1), len(lst2)
-    lst2 = sorted(lst2)
-    j = more = less = 0
-    for repeats, x in _runs(sorted(lst1)):
-        while j <= (n - 1) and lst2[j] < x:
-            j += 1
-        more += j*repeats
-        while j <= (n - 1) and lst2[j] == x:
-            j += 1
-        less += (n - j)*repeats
-    d = (more - less) / (m*n)
-    return d
-
-def __concentrate_( *args):
-    """ Concentrate input list-like arrays
-
-    """
-    v = list( map( np.asarray, args))
-    vec = np.hstack( np.concatenate( v))
-    return( vec)
-
-def __ss_total_( *args):
-    """ Return total of sum of square
-
-    """
-    vec = __concentrate_( *args)
-    ss_total = sum( (vec - np.mean( vec)) **2)
-    return( ss_total)
-
-def __ss_between_( *args):
-    """ Return between-subject sum of squares
-
-    """
-    # grand mean
-    grand_mean = np.mean( __concentrate_( *args))
-
-    ss_btwn = 0
-    for a in args:
-        ss_btwn += ( len(a) * ( np.mean( a) - grand_mean) **2)
-
-    return( ss_btwn)
-
-def _runs(lst):
-    """Iterator, chunks repeated values"""
-    for j, two in enumerate(lst):
-        if j == 0:
-            one, i = two, 0
-        if one != two:
-            yield j - i, one
-            i = j
-        one = two
-    yield j - i + 1, two
 
 #%% Correct for multiple comparisons
-
 def _multitest_correct(pvals, multitest_method, fdr):
     """
     Multiple comparisons correction of pvalues from univariate tests.
@@ -375,7 +302,7 @@ def _multitest_correct(pvals, multitest_method, fdr):
         mask = ~pd.isnull(pvals.values.reshape(-1))
 
     # Initialize array with corrected pvalues and reject hypothesis flags
-    c_reject = np.ones(mask.shape)*np.nan
+    c_reject = np.zeros(mask.shape, dtype=bool)
     c_pvals = np.ones(mask.shape)*np.nan
 
     # Make the correction with the chosen multitest_method
@@ -405,6 +332,31 @@ def _multitest_correct(pvals, multitest_method, fdr):
 
 #%% Bootstrapping
 def bootstrapped_ci(x, func, n_boot, which_ci=95, axis=None):
+    """
+    Get the confidence interval (CI) of a metric using bootstrapping.
+
+    Parameters
+    ----------
+    x : array-like
+        a sample.
+    func : callable (function object)
+        the function that estimated the metric (for example np.mean, np.median, ...).
+    n_boot : int
+        number of sub-samples to use for the bootstrap estimate.
+    which_ci : float, optional
+        A number between 0 and 100 that defines the confidence interval.
+        The default is 95, which means that there is 95% probability the metric
+        will be inside the limits of the confidence interval.
+    axis : int or None, optional
+        Will pass axis to func as a keyword argument.
+        The default is None.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
     from seaborn.algorithms import bootstrap
     from seaborn.utils import ci
 
