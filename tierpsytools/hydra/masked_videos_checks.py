@@ -69,7 +69,7 @@ def get_prestim_videos(day_root_dir):
                              )
     prestim_videos.drop(columns='imgstore_camera',
                         inplace=True)
-    prestim.sort_values(by=['run_number', 'rig', 'channel'], inplace=True)
+    prestim_videos.sort_values(by=['run_number', 'rig', 'channel'], inplace=True)
 
     return prestim_videos
 # %%
