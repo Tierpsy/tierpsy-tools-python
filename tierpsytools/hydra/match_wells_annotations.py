@@ -53,7 +53,7 @@ def import_wells_annotations(annotations_file,
                                         lambda x: x.split('/')[0])
     return annotations_df
 
-def import_wells_annoations_in_folder(aux_dir,
+def import_wells_annotations_in_folder(aux_dir,
                                       search_string='*wells_annotations.hdf5'):
     """
     Find annotations files in an AuxiliaryFiles directory and returns the
@@ -198,7 +198,7 @@ def update_metadata(aux_dir, matched_long, saveto=None, del_if_exists=False):
 if __name__=='__main__':
     PROJECT_DIR = Path('/Volumes/behavgenom$/Ida/Data/Hydra/DiseaseScreen')
 
-    wells_annotations_df = import_wells_annoations_in_folder(PROJECT_DIR / 'AuxiliaryFiles')
+    wells_annotations_df = import_wells_annotations_in_folder(PROJECT_DIR / 'AuxiliaryFiles')
 
     matched_videos_annoations = match_rawvids_annotations(PROJECT_DIR / 'RawVideos',
                                                           wells_annotations_df)
