@@ -9,23 +9,6 @@ Created on Wed Jan 23 19:35:57 2019
 import numpy as np
 import pandas as pd
 
-
-def _handle_zeros_in_scale(scale, copy=True):
-    ''' Makes sure that whenever scale is zero, we handle it correctly.
-    This happens in most scalers when we have constant features.'''
-
-    # if we are fitting on 1D arrays, scale might be a scalar
-    if np.isscalar(scale):
-        if scale == .0:
-            scale = 1.
-        return scale
-    elif isinstance(scale, np.ndarray):
-        if copy:
-            # New array to avoid side-effects
-            scale = scale.copy()
-        scale[scale == 0.0] = 1.0
-        return scale
-
 class scalingClass():
     """
     A class for scaling features sets. It acceptes the following options:
@@ -51,34 +34,6 @@ class scalingClass():
         self._fitted = False
 
     ## Define class methods
-
-    def check_input(self, Xin):
-        isdataframe=False
-        if isinstance(Xin,list):
-            X = np.array(Xin[:])
-        elif isinstance(Xin,pd.DataFrame):
-            isdataframe=True
-            X = Xin.copy().values
-        elif isinstance(Xin,np.ndarray):
-            X = np.copy(Xin)
-        else:
-            ValueError('Data type not recognised in scalingClass. Input can be list, numpy array or pandas dataframe.')
-        return X, isdataframe
-
-    def _reset(self):
-        """Reset internal data-dependent state of the scaler, if necessary.
-        __init__ parameters are not touched.
-        """
-        if self._fitted:
-            if hasattr(self, 'mean_'):
-                del self.mean_
-                del self.std_
-            if hasattr(self, 'min_'):
-                del self.min_
-                del self.diff_
-            if hasattr(self, 'norm_'):
-                del self.norm_
-
     # normalization
     def fit(self, Xin, y=None):
 
@@ -199,4 +154,49 @@ class scalingClass():
 
         return self.transform(Xin)
 
+    
+    def check_input(self, Xin):
+        isdataframe=False
+        if isinstance(Xin,list):
+            X = np.array(Xin[:])
+        elif isinstance(Xin,pd.DataFrame):
+            isdataframe=True
+            X = Xin.copy().values
+        elif isinstance(Xin,np.ndarray):
+            X = np.copy(Xin)
+        else:
+            ValueError('Data type not recognised in scalingClass. Input can be list, numpy array or pandas dataframe.')
+        return X, isdataframe
+
+    def _reset(self):
+        """Reset internal data-dependent state of the scaler, if necessary.
+        __init__ parameters are not touched.
+        """
+        if self._fitted:
+            if hasattr(self, 'mean_'):
+                del self.mean_
+                del self.std_
+            if hasattr(self, 'min_'):
+                del self.min_
+                del self.diff_
+            if hasattr(self, 'norm_'):
+                del self.norm_
+
+
+#%% helper functions
+def _handle_zeros_in_scale(scale, copy=True):
+    ''' Makes sure that whenever scale is zero, we handle it correctly.
+    This happens in most scalers when we have constant features.'''
+
+    # if we are fitting on 1D arrays, scale might be a scalar
+    if np.isscalar(scale):
+        if scale == .0:
+            scale = 1.
+        return scale
+    elif isinstance(scale, np.ndarray):
+        if copy:
+            # New array to avoid side-effects
+            scale = scale.copy()
+        scale[scale == 0.0] = 1.0
+        return scale
 

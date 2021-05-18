@@ -18,6 +18,7 @@ from tierpsytools.preprocessing.preprocess_features import impute_nan_inf
 from tierpsytools.preprocessing.scaling_class import scalingClass
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 #%% Input file paths
 # Here, I have a file with the features dataframe and the matching metadata dataframe,
@@ -37,7 +38,7 @@ meta_file = Path().cwd() / 'sample_data' / 'metadata_dataframe.csv'
 feat = pd.read_csv(feat_file)
 meta = pd.read_csv(meta_file)
 
-# Align the bluelight conditions (one row per well, wide format)
+# Optional: Align the bluelight conditions (one row per well, wide format)
 feat, meta = align_bluelight_conditions(
     feat, meta, bluelight_specific_meta_cols=['imgstore_name', 'n_skeletons'],
     merge_on_cols= ['date_yyyymmdd', 'imaging_plate_id', 'well_name'])
@@ -48,11 +49,20 @@ feat, meta = filter_n_skeletons(
     feat, meta, min_nskel_per_video=2000, min_nskel_sum=None)
 
 # Filter rows based on percentage of nan values
+# CAUTION in case of stationary / paralysed worms !
 feat = filter_nan_inf(feat, 0.2, 1)
 meta = meta.loc[feat.index]
 
 # Filter features based on percentage of nan values
 feat = filter_nan_inf(feat, 0.05, 0)
+
+# Optional: select feature set - select_feat_set()
+
+# Optional: remove features with constant values feat_filter_std() [usually unnecessary]
+
+# Optional: drop_feat_by_keyword(feat, keywords=['length_norm', 'path_curvature'])
+
+# Optional: drop_bad_wells()
 
 #%% Preprocess data
 # Impute the remainig nan values
@@ -73,3 +83,17 @@ for day in meta['date_yyyymmdd'].unique():
     plt.scatter(*Y[meta['date_yyyymmdd']==day, :].T, label=day)
 plt.legend()
 
+#%% Hierarchical clutering
+# Get row colors that show MOA and mathcing legend data
+labels = meta['worm_strain']
+unique_labels = labels.unique()
+
+# look-up table - {label ---> color}
+palette = sns.color_palette(n_colors=unique_labels.shape[0])
+lut = dict(zip(unique_labels, palette))
+
+# Convert the dictionary into a Series
+row_colors = pd.DataFrame(labels)['worm_strain'].map(lut)
+
+# metric: try ['euclidean', 'cosine', 'correlation']
+g = sns.clustermap(feat, method='complete', metric='cosine', row_colors=row_colors)

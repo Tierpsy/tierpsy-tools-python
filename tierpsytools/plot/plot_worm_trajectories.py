@@ -41,21 +41,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import pdb
 
-def _plot_trajectory(
-        xycoord, axes=None, subsampling_rate=1, color=None,
-        xlim=None, ylim=None):
-
-    xycoord = xycoord.iloc[::subsampling_rate, :]
-
-    if axes is None:
-        fig, axes = plt.subplots()
-
-    axes.plot(*xycoord.values.T, color=color)
-    axes.set_xlim(xlim)
-    axes.set_ylim(ylim)
-
-    return
-
 def plot_well_trajectories(
         xycoord, worm_ids, subsampling_rate=1, title=None,
         xlim=None, ylim=None, saveto=None):
@@ -228,6 +213,22 @@ def plot_multiwell_trajectories(
     if saveto is not None:
         plt.savefig(saveto)
         plt.close()
+
+    return
+
+#%% helper functions
+def _plot_trajectory(
+        xycoord, axes=None, subsampling_rate=1, color=None,
+        xlim=None, ylim=None):
+
+    xycoord = xycoord.iloc[::subsampling_rate, :]
+
+    if axes is None:
+        fig, axes = plt.subplots()
+
+    axes.plot(*xycoord.values.T, color=color)
+    axes.set_xlim(xlim)
+    axes.set_ylim(ylim)
 
     return
 

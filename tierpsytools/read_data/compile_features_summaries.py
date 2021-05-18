@@ -15,117 +15,6 @@ import pandas as pd
 import warnings
 from time import time
 
-
-def find_fname_summaries(feat_files):
-    fname_files = []
-    for feat_fl in feat_files:
-        fname_fl = None
-        # 1) look for filenames_summaries filename in features_summaries file headers
-        with open(feat_fl, 'r') as fid:
-            comment_line = True
-            while comment_line:
-                line = fid.readline()
-                if 'FILENAMES SUMMARY FILE' in line:
-                    fname_fl = Path(line.split(',')[1].replace('\n',''))
-                    break
-                if line[0] != '#':
-                    comment_line = False
-                    warnings.warn(
-                        'filenames_summaries filename not found in the ' +
-                        'features_summaries file. Looking for the file in ' +
-                        'features_summaries path...')
-
-        # 2) If not there, look for filenames_summaries in the same folder where
-        # features_summaries is located
-        if fname_fl is None:
-            if (feat_fl.parent / (feat_fl.stem.replace('features','filenames')+'.csv')).exists():
-                fname_fl = (feat_fl.parent / (feat_fl.stem.replace('features','filenames')+'.csv'))
-                print('filenames_summaries file found.')
-            else:
-                warnings.warn(
-                    'No filenames_summaries file found matching the ' +
-                    'features_summaries file {}.'.format(feat_fl))
-
-        # If the filenames summary file is not found, None will be appended to
-        # the fname_files list so that the one-to-one correspondance with the
-        # the feat_files list is maintained.
-
-        fname_files.append(fname_fl)
-
-    return fname_files
-
-def check_summary_type(feat_files, fname_files):
-    sum_type = []
-    for file in feat_files + fname_files:
-        tmp = ''.join(file.stem.split('_')[2:])
-        tmp = ''.join([l for l in tmp if not l.isdigit()])
-        sum_type.append(tmp)
-    if not all(stype == sum_type[0] for stype in sum_type):
-        raise ValueError('The summary files specified are not of the same type.')
-    return
-
-def _get_fname_files(feat_files):
-    fname_files = []
-    for file in feat_files:
-        with open(file, "r") as fid:
-            header = fid.readline()
-            if not header.startswith('#'):
-                raise ValueError(
-                    'No header found in features summaries file. ' +
-                    'Corresponding filename summaries file cannot be retrieved.')
-            fname_files.append(header.replace('#','').replace(' ', ''))
-    assert len(feat_files) == len(fname_files)
-    return fname_files
-
-def _copy_commented_headers(source_file, dest_file, comment='#'):
-    fid = open(source_file, 'r')
-    fid_comp = open(dest_file, 'w')
-
-    for i in range(20):
-        line = fid.readline()
-        if line[0] == '#':
-            fid_comp.write(line)
-        else:
-            break
-    fid.close()
-    fid_comp.close()
-    return
-
-def _compile_columns(file_list):
-    from pandas.errors import EmptyDataError
-
-    # Read one line from each dataframe
-    dfsamples = []
-    for file in file_list:
-        try:
-            dfsamples.append(pd.read_csv(
-                file, index_col=None, header=0, nrows=1, comment='#'))
-        except EmptyDataError:
-            raise EmptyDataError('Summary file empty: \n{}'.format(file))
-
-    # Compare number of columns
-    ncols = [df.shape[1] for df in dfsamples]
-    if not all([n==ncols[0] for n in ncols]):
-        warnings.warn('The dataframes to compile do not have the same number of columns.')
-
-    # Compile all columns
-    columns = pd.concat(dfsamples, axis=0, sort=False).columns.to_list()
-
-    return columns
-
-def _write_columns_header(columns, filename):
-    with open(filename,'a') as fid:
-        fid.write(','.join(columns)+'\n')
-    return
-
-def _sort_columns(df, columns):
-    from numpy import nan
-    missing = [col for col in columns if col not in df.columns]
-    if missing:
-        for col in missing:
-            df[col] = nan
-    return df[columns]
-
 def compile_tierpsy_summaries(
         feat_files, compiled_feat_file, compiled_fname_file, fname_files=None):
     """
@@ -206,6 +95,133 @@ def compile_tierpsy_summaries(
         counter += nfiles
 
     return
+
+#%% Helper functions
+def find_fname_summaries(feat_files):
+    """
+    Finds the filename_summaries files that match each of the feature_summaries files 
+    in the feat_files list.
+    First looks in the header in the feature_summaries file. If the header does not 
+    contain the info (older version of tierpsy), then it looks for a file with the 
+    expected name in the same location as the feature_summaries file.
+    """
+    fname_files = []
+    for feat_fl in feat_files:
+        fname_fl = None
+        # 1) look for filenames_summaries filename in features_summaries file headers
+        with open(feat_fl, 'r') as fid:
+            comment_line = True
+            while comment_line:
+                line = fid.readline()
+                if 'FILENAMES SUMMARY FILE' in line:
+                    fname_fl = Path(line.split(',')[1].replace('\n',''))
+                    break
+                if line[0] != '#':
+                    comment_line = False
+                    warnings.warn(
+                        'filenames_summaries filename not found in the ' +
+                        'features_summaries file. Looking for the file in ' +
+                        'features_summaries path...')
+
+        # 2) If not there, look for filenames_summaries in the same folder where
+        # features_summaries is located
+        if fname_fl is None:
+            if (feat_fl.parent / (feat_fl.stem.replace('features','filenames')+'.csv')).exists():
+                fname_fl = (feat_fl.parent / (feat_fl.stem.replace('features','filenames')+'.csv'))
+                print('filenames_summaries file found.')
+            else:
+                warnings.warn(
+                    'No filenames_summaries file found matching the ' +
+                    'features_summaries file {}.'.format(feat_fl))
+
+        # If the filenames summary file is not found, None will be appended to
+        # the fname_files list so that the one-to-one correspondance with the
+        # the feat_files list is maintained.
+
+        fname_files.append(fname_fl)
+
+    return fname_files
+
+def check_summary_type(feat_files, fname_files):
+    """
+    Find the type of feature summaries based on the filenames of the features summaries
+    and the filenames summaries.
+    params
+        feat_files: list
+            A list of feature_summaries file paths.
+        fname_files: list
+            A list of the filename_summaries file paths corresponding to the feat_files.
+    """
+    sum_type = []
+    for file in feat_files + fname_files:
+        tmp = ''.join(file.stem.split('_')[2:])
+        tmp = ''.join([l for l in tmp if not l.isdigit()])
+        sum_type.append(tmp)
+    if not all(stype == sum_type[0] for stype in sum_type):
+        raise ValueError('The summary files specified are not of the same type.')
+    return
+
+def _get_fname_files(feat_files):
+    fname_files = []
+    for file in feat_files:
+        with open(file, "r") as fid:
+            header = fid.readline()
+            if not header.startswith('#'):
+                raise ValueError(
+                    'No header found in features summaries file. ' +
+                    'Corresponding filename summaries file cannot be retrieved.')
+            fname_files.append(header.replace('#','').replace(' ', ''))
+    assert len(feat_files) == len(fname_files)
+    return fname_files
+
+def _copy_commented_headers(source_file, dest_file, comment='#'):
+    fid = open(source_file, 'r')
+    fid_comp = open(dest_file, 'w')
+
+    for i in range(20):
+        line = fid.readline()
+        if line[0] == '#':
+            fid_comp.write(line)
+        else:
+            break
+    fid.close()
+    fid_comp.close()
+    return
+
+def _compile_columns(file_list):
+    from pandas.errors import EmptyDataError
+
+    # Read one line from each dataframe
+    dfsamples = []
+    for file in file_list:
+        try:
+            dfsamples.append(pd.read_csv(
+                file, index_col=None, header=0, nrows=1, comment='#'))
+        except EmptyDataError:
+            raise EmptyDataError('Summary file empty: \n{}'.format(file))
+
+    # Compare number of columns
+    ncols = [df.shape[1] for df in dfsamples]
+    if not all([n==ncols[0] for n in ncols]):
+        warnings.warn('The dataframes to compile do not have the same number of columns.')
+
+    # Compile all columns
+    columns = pd.concat(dfsamples, axis=0, sort=False).columns.to_list()
+
+    return columns
+
+def _write_columns_header(columns, filename):
+    with open(filename,'a') as fid:
+        fid.write(','.join(columns)+'\n')
+    return
+
+def _sort_columns(df, columns):
+    from numpy import nan
+    missing = [col for col in columns if col not in df.columns]
+    if missing:
+        for col in missing:
+            df[col] = nan
+    return df[columns]
 
 if __name__ == "__main__":
 
