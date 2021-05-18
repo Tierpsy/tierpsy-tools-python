@@ -118,7 +118,7 @@ def mRMR_feature_selection(
         feat, k=10, y_class=None, redundancy=None, relevance=None,
         redundancy_func='pearson_corr', get_abs_redun=False,
         relevance_func='kruskal',
-        n_bins=10, mrmr_criterion='MIQ',
+        n_bins=10, mrmr_criterion='MID',
         normalize_redundancy=False, normalize_relevance=True,
         plot=True, k_to_plot=None, close_after_plotting=False,
         saveto=None, figsize=None

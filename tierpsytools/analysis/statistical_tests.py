@@ -255,8 +255,42 @@ def get_effect_sizes(
 
     return effect
 
+#%% Bootstrapping
+def bootstrapped_ci(x, func, n_boot, which_ci=95, axis=None):
+    """
+    Get the confidence interval (CI) of a metric using bootstrapping.
 
-#%% Correct for multiple comparisons
+    Parameters
+    ----------
+    x : array-like
+        a sample.
+    func : callable (function object)
+        the function that estimated the metric (for example np.mean, np.median, ...).
+    n_boot : int
+        number of sub-samples to use for the bootstrap estimate.
+    which_ci : float, optional
+        A number between 0 and 100 that defines the confidence interval.
+        The default is 95, which means that there is 95% probability the metric
+        will be inside the limits of the confidence interval.
+    axis : int or None, optional
+        Will pass axis to func as a keyword argument.
+        The default is None.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
+    from seaborn.algorithms import bootstrap
+    from seaborn.utils import ci
+
+    boot_distribution = bootstrap(x, func=func, n_boot=n_boot, axis=axis)
+
+    return ci(boot_distribution, which=which_ci, axis=axis)
+
+
+#%% helper function: Correct for multiple comparisons
 def _multitest_correct(pvals, multitest_method, fdr):
     """
     Multiple comparisons correction of pvalues from univariate tests.
@@ -329,37 +363,3 @@ def _multitest_correct(pvals, multitest_method, fdr):
         c_reject = pd.Series(c_reject, index=pvals.index)
 
     return c_reject, c_pvals
-
-#%% Bootstrapping
-def bootstrapped_ci(x, func, n_boot, which_ci=95, axis=None):
-    """
-    Get the confidence interval (CI) of a metric using bootstrapping.
-
-    Parameters
-    ----------
-    x : array-like
-        a sample.
-    func : callable (function object)
-        the function that estimated the metric (for example np.mean, np.median, ...).
-    n_boot : int
-        number of sub-samples to use for the bootstrap estimate.
-    which_ci : float, optional
-        A number between 0 and 100 that defines the confidence interval.
-        The default is 95, which means that there is 95% probability the metric
-        will be inside the limits of the confidence interval.
-    axis : int or None, optional
-        Will pass axis to func as a keyword argument.
-        The default is None.
-
-    Returns
-    -------
-    TYPE
-        DESCRIPTION.
-
-    """
-    from seaborn.algorithms import bootstrap
-    from seaborn.utils import ci
-
-    boot_distribution = bootstrap(x, func=func, n_boot=n_boot, axis=axis)
-
-    return ci(boot_distribution, which=which_ci, axis=axis)

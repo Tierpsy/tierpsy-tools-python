@@ -348,9 +348,6 @@ class DataBaggingByClass(DataBagging):
 
         return self.X_a, self.meta_a
 
-
-
-
 #%%
 if __name__=="__main__":
     import matplotlib.pyplot as plt

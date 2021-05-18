@@ -11,29 +11,6 @@ from pathlib import Path
 from warnings import warn
 import pdb
 
-def add_bluelight_label(
-        meta, filename_column='imgstore_name', split_string='_',
-        labels=['prestim', 'bluelight', 'poststim']
-        ):
-
-    from numpy import nan
-
-    if 'bluelight' in meta:
-        return meta
-
-    def _bluelight_from_filename(fname):
-        split = Path(fname).stem.split(split_string)
-        isin = [x in split for x in labels]
-        label = [l for (l, i) in zip(labels, isin) if i]
-        if len(label) == 1:
-            return label[0]
-        else:
-            return nan
-
-    bluelight = meta[filename_column].apply(_bluelight_from_filename)
-    meta.insert(0, 'bluelight', bluelight)
-    return meta
-
 def read_hydra_metadata(
         feat_file, fname_file, meta_file,
         feat_id_cols = ['file_id', 'n_skeletons', 'well_name', 'is_good_well'],
@@ -288,6 +265,29 @@ def align_bluelight_conditions(
         return feat, meta
 
 
+# %% helper functions
+def add_bluelight_label(
+        meta, filename_column='imgstore_name', split_string='_',
+        labels=['prestim', 'bluelight', 'poststim']
+        ):
+
+    from numpy import nan
+
+    if 'bluelight' in meta:
+        return meta
+
+    def _bluelight_from_filename(fname):
+        split = Path(fname).stem.split(split_string)
+        isin = [x in split for x in labels]
+        label = [l for (l, i) in zip(labels, isin) if i]
+        if len(label) == 1:
+            return label[0]
+        else:
+            return nan
+
+    bluelight = meta[filename_column].apply(_bluelight_from_filename)
+    meta.insert(0, 'bluelight', bluelight)
+    return meta
 
 def _imgstore_name_from_filename(filename, path_levels=[-3,-1]):
 

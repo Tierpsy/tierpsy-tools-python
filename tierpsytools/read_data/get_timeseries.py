@@ -9,26 +9,42 @@ import pandas as pd
 import numpy as np
 from time import time
 
-
-def get_filenames(root_dir):
+def get_timeseries(root_dir, select_keywords=None, drop_keywords=None,
+                   names=None, only_wells=None):
     """
-    Find all *featuresN.hdf5 files under root_dir
+    Get timeseries data from *_featuresN files under a root directory.
     Input:
-        root_dir = path to results root directory
+        root_dir = results root directory
+        select_keywords = select *_featuresN.hdf5 files that contain any of
+                            these keywords in the file path
+        drop_keywords = ignore *_featuresN.hdf5 files that contain any of
+                            these keywords in the file path
+        names = timeseries names to exctact. If None, all timeseries data will
+                be returned
+        only_wells = list of well_names to read from the featuresN.hdf5 file.
+                     If None, the timeseries will not be filtered by well
+            (        good for legacy data)
     Return:
-        filenames = dataframe listing *featuresN.hdf5 file paths and assigning
-                    file_id to each file (tierpsy format)
+        filenames = dataframe with filenames and file_ids
+        timeseries =
     """
-    from pathlib import Path
+    filenames = get_filenames(root_dir)
 
-    file_list = Path(root_dir).rglob('*featuresN.hdf5')
-    file_list = [str(file) for file in file_list]
+    filenames = select_filenames(filenames, select_keywords, drop_keywords)
 
-    filenames = pd.DataFrame(file_list, columns=['file_name'])
-    filenames.insert(0, 'file_id', np.arange(len(file_list)))
+    data = {}
+    start_time = time()
+    for ifl, (fileid, file) in enumerate(
+            filenames[['file_id', 'file_name']].values):
+        file_time = time()
+        print('Reading timeseries from file {} of {}'.format(
+            ifl+1, filenames.shape[0]))
+        timeseries = read_timeseries(file, only_wells=only_wells)
+        data[fileid] = timeseries
+        print('File read in {} sec.'.format(time()-file_time))
+    print('Done reading in {} sec.'.format(time()-start_time))
 
-    return filenames
-
+    return filenames, data
 
 def read_timeseries(filename, names=None, only_wells=None):
     """
@@ -56,6 +72,7 @@ def read_timeseries(filename, names=None, only_wells=None):
         return series[names]
 
 
+#%% helper functions
 def select_filenames(filenames, select_keywords, drop_keywords):
     """
     Filter the filenames list based on keywords
@@ -103,45 +120,26 @@ def select_filenames(filenames, select_keywords, drop_keywords):
 
     return filenames
 
-
-def get_timeseries(root_dir, select_keywords=None, drop_keywords=None,
-                   names=None, only_wells=None):
+def get_filenames(root_dir):
     """
-    Get timeseries data from *_featuresN files under a root directory.
+    Find all *featuresN.hdf5 files under root_dir
     Input:
-        root_dir = results root directory
-        select_keywords = select *_featuresN.hdf5 files that contain any of
-                            these keywords in the file path
-        drop_keywords = ignore *_featuresN.hdf5 files that contain any of
-                            these keywords in the file path
-        names = timeseries names to exctact. If None, all timeseries data will
-                be returned
-        only_wells = list of well_names to read from the featuresN.hdf5 file.
-                     If None, the timeseries will not be filtered by well
-            (        good for legacy data)
+        root_dir = path to results root directory
     Return:
-        filenames = dataframe with filenames and file_ids
-        timeseries =
+        filenames = dataframe listing *featuresN.hdf5 file paths and assigning
+                    file_id to each file (tierpsy format)
     """
-    filenames = get_filenames(root_dir)
+    from pathlib import Path
 
-    filenames = select_filenames(filenames, select_keywords, drop_keywords)
+    file_list = Path(root_dir).rglob('*featuresN.hdf5')
+    file_list = [str(file) for file in file_list]
 
-    data = {}
-    start_time = time()
-    for ifl, (fileid, file) in enumerate(
-            filenames[['file_id', 'file_name']].values):
-        file_time = time()
-        print('Reading timeseries from file {} of {}'.format(
-            ifl+1, filenames.shape[0]))
-        timeseries = read_timeseries(file, only_wells=only_wells)
-        data[fileid] = timeseries
-        print('File read in {} sec.'.format(time()-file_time))
-    print('Done reading in {} sec.'.format(time()-start_time))
+    filenames = pd.DataFrame(file_list, columns=['file_name'])
+    filenames.insert(0, 'file_id', np.arange(len(file_list)))
 
-    return filenames, data
+    return filenames
 
-
+#%% testing
 if __name__ == "__main__":
 
     root_dir = ("/Volumes/behavgenom$/Adam/Screening/"
