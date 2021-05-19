@@ -105,7 +105,14 @@ def load_ch1_metadata(meta_fname, proj_root, is_strict=True):
     return ch1_df
 
 
-def preprocess_frame(frame):
+def postprocess(img):
+    img = cv2.adaptiveThreshold(
+        img, 255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 25)
+    return
+
+
+def get_plate_id_from_frame(frame):
     scaling_factor = 0.05
     # crop and resize
     physical_plate_id = np.rot90(frame[:, min(frame.shape):])
@@ -115,33 +122,25 @@ def preprocess_frame(frame):
     physical_plate_id = cv2.resize(
         physical_plate_id, (width, height), interpolation=cv2.INTER_AREA)
     # physical_plate_id = 255 - physical_plate_id
-    physical_plate_id = cv2.adaptiveThreshold(
-        physical_plate_id, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 25)
+
     return physical_plate_id
 
 
-def get_imgstr_from_masked(masked_fname):
+def get_frame_from_masked(masked_fname):
 
     # read frame data
     with tables.File(masked_fname, 'r') as fid:
         frame = fid.get_node('/full_data')[0]
 
-    physical_plate_id = preprocess_frame(frame)
-    imgstr = encode_img_for_html(physical_plate_id)
-
-    return imgstr
+    return frame
 
 
-def get_imgstr_from_raw(extradatareader_instance):
+def get_frame_from_raw(extradatareader_instance):
 
     frame = extradatareader_instance.store.get_next_image()[0]
     extradatareader_instance.store.close()
 
-    physical_plate_id = preprocess_frame(frame)
-    imgstr = encode_img_for_html(physical_plate_id)
-
-    return imgstr
+    return frame
 
 
 def encode_img_for_html(img_array):
@@ -160,17 +159,24 @@ def encode_fig_for_html(fig):
     return figdata_svg
 
 
-def get_row_info(row):
+def get_row_info(row, is_img_postprocessing=True):
 
     # get info from raw video
     edr = ExtraDataReader(row.raw_videos_name)
 
     # frame
     try:
-        img_str = get_imgstr_from_raw(edr)
+        frame = get_frame_from_raw(edr)
     except:
         # gets frame from masked as backup
-        img_str = get_imgstr_from_masked(row['masked_videos_name'])
+        frame = get_frame_from_masked(row['masked_videos_name'])
+    # now crop and scale
+    img = get_plate_id_from_frame(frame)
+    # postprocess the cropped bit
+    if is_img_postprocessing:
+        img = postprocess(img)
+    # enconde
+    img_str = encode_img_for_html(img)
 
     # sensors
     ed_df = edr.get_extra_data(
@@ -256,7 +262,9 @@ def write_closing_tags(out_fname):
 #     return
 
 
-def _platechecker(metadata_path, project_root=None, output_path=None):
+def _platechecker(
+        metadata_path, project_root=None, output_path=None,
+        is_img_postprocessing=True):
     """
     platechecker
     Scan the metadata provided, and create a html report with
@@ -276,6 +284,10 @@ def _platechecker(metadata_path, project_root=None, output_path=None):
     output_path : Path or str, optional
         Path to the output html file. If omitted,
         it will be `project_root/AuxiliaryFiles/platechecker_report.html`
+    is_img_postprocessing : logical, optional, default True
+        If True, the part of frame where the imaging plate id is written
+        will be enhanced. Hopefully this makes it easier to read. If not,
+        set it to False
     """
 
     if isinstance(metadata_path, str):
@@ -303,7 +315,8 @@ def _platechecker(metadata_path, project_root=None, output_path=None):
 
     # loop and write
     for row in tqdm(meta_df.itertuples()):
-        row_data_out = get_row_info(row)
+        row_data_out = get_row_info(
+            row, is_img_postprocessing=is_img_postprocessing)
         write_table_row(output_path, row_data_out)
 
     write_closing_tags(output_path)
