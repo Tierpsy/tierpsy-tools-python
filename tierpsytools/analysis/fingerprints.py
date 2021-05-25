@@ -163,7 +163,7 @@ class tierpsy_fingerprints():
 
         """
         if not hasattr(self, 'test_results'):
-            self._run_univariate_tests(X, y, control='N2', n_jobs=-1)
+            self._run_univariate_tests(X, y, control=control, n_jobs=-1)
         self._create_profile()
         return
 
