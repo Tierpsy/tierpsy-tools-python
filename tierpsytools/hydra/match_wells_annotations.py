@@ -291,12 +291,6 @@ def update_metadata_with_wells_annotations(
         Dataframe containing all the info in the metadata file, plus the
         manual annotations. If the function aborts early, it will return None.
 
-    Raises
-    ------
-    Exception
-        This function will error out if the metadata contains empty entries
-        for the imgstores column. This really should not happen unless the
-        metadata file has pathological issues.
     """
 
     # input check
