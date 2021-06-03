@@ -46,13 +46,36 @@ def k_significant_feat(
         feat_names: list shape=(n_features)
             The names of the features, when feat is an array and not a dataframe
             (will be used for plotting)
-
-    return:
-        support: array of booleans
-            True for the selected features, False for the rest
         plot: boolean
             If True, the boxplots of the chosen features will be plotted
-        plot
+        k_to_plot: integer or None,
+            Number of features to plot. if None, but plot is True, it will
+            default to be the same as k
+        close_after_plotting: boolean
+            Programmatically close the figure window. Useful if plotting many 
+            features to file. Default False
+        saveto: Path,
+            Path where to save the figure. Default is None, which does not 
+            save the figure
+        figsize: tuple,
+            Size of the figure in inches. Default is None, uses the default figsize
+        title: string,
+            title to give to the figure, default is None
+        xlabel: string,
+            x label for the figures, default is None
+
+    return:
+        feat.columns[top_ft_ids].to_list(): 
+            a list of the k most significant features
+        (scores, pvalues):
+            a tuple containing an array with the scores of the k significant 
+            features, and an array with their p values. If the p values are 
+            not returned by the SelectKBest class, only scores is returned by
+            this function. 
+            NOTE: p values are NOT corrected for multiple comparisons
+        support: array of booleans
+            True for the selected features, False for the rest
+
     """
     from sklearn.feature_selection import \
         SelectKBest, chi2,f_classif, mutual_info_classif
