@@ -13,9 +13,11 @@ Requires:
 
 """
 
+import h5py
+import warnings
 import pandas as pd
 from pathlib import Path
-import warnings
+
 from tierpsytools.hydra.match_bluelight_videos import (
     match_bluelight_videos_in_folder)
 
@@ -43,9 +45,18 @@ def import_wells_annotations(annotations_file,
         DESCRIPTION.
 
     """
-    with pd.HDFStore(annotations_file) as fid:
+    # read two main tables
+    with pd.HDFStore(annotations_file, 'r') as fid:
         _fnames = fid[table_names[0]]
         _markings = fid[table_names[1]]
+
+    # and the working directory to complete the filenames
+    with h5py.File(annotations_file, 'r') as fid:
+        _working_dir = Path(fid[table_names[0]].attrs['working_dir'])
+
+    # let's create the full file name now
+    _fnames['full_filename'] = _fnames['filename'].apply(
+        lambda x: _working_dir / x)
 
     # checks and warnings
     # first check for skipped videos: they are in the files df but not in the
@@ -76,8 +87,9 @@ def import_wells_annotations(annotations_file,
         on='file_id',
         # right_index=True,
         validate='one_to_many')
-    annotations_df[imgstore_name] = annotations_df.filename.apply(
-                                        lambda x: x.split('/')[0])
+    annotations_df[imgstore_name] = annotations_df['full_filename'].apply(
+        lambda x: x.parent.name)
+    annotations_df = annotations_df.drop(columns=['full_filename'])
 
     # collapsing the different values of well_label => is_bad_wells
     annotations_df['is_bad_well'] = annotations_df['well_label'] != 1
