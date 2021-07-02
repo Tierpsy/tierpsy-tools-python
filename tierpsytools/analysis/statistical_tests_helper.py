@@ -21,6 +21,8 @@ def get_test_fun(test, vectorized=False):
         func = partial(stats_test, test=mannwhitneyu, vectorized=False)
     elif test == 't-test':
         func = partial(stats_test, test=ttest_ind, vectorized=True)
+    else:
+        raise Exception('unknown test, check your spelling')
 
     return func
 
