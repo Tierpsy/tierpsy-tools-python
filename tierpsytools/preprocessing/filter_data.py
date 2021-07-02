@@ -150,7 +150,7 @@ def select_feat_set(
             'tierpsy_8': 'tierpsy_8.csv',
             'tierpsy_16': 'tierpsy_16.csv',
             'tierpsy_256': 'tierpsy_256.csv',
-            'tierpsy_2k': 'tierpsy_2k.csv'
+            'tierpsy_2k': 'top2k_tierpsy_no_blob_no_eigen_only_abs_no_norm.csv'
             }
 
         set_file = join(AUX_FILES_DIR,'feat_sets',filenames[tierpsy_set_name])
