@@ -14,6 +14,8 @@ def univariate_tests(
         X, y, control='N2', test='ANOVA',
         comparison_type='multiclass',
         multitest_correction='fdr_by', alpha=0.05,
+        n_permutation_test=None,
+        perm_blocks=None,
         n_jobs=-1):
     """
     Test whether a single compound has siginificant effects compared to the
@@ -52,6 +54,17 @@ def univariate_tests(
         The default is 'fdr_by'.
     alpha : float, optional
         The significant level for the corrected p-values. The default is 0.05.
+    n_permutation_test : int, None, or 'all', optional. The default is None
+        If n_permutation_test is not None, the p-value is not the one returned
+        by the statistical test, but it is calculated with permutation tests.
+        Briefly, the test is carried out multiple times upon shuffling of the
+        lables in `y`. The p values is the frequency with which the test
+        statistics on the shuffled labels was higher than the test stat on the
+        actual labels
+    perm_blocks : array-like, or None. Optional. Default is None.
+        If doing a permutation test, blocks restricts permutations to happen
+        only within blocks, not across blocks.
+
 
     Raises
     ------
@@ -69,15 +82,14 @@ def univariate_tests(
 
     """
     from tierpsytools.analysis.statistical_tests_helper import get_test_fun
-
-    if not np.isin(control, np.array(y)):
-        raise ValueError('control not found in the y array.')
+    from tierpsytools.analysis.permutation_tests_helper import (
+        iterate_nested_shufflings)
 
     if np.unique(y).shape[0]<2:
         raise Exception('Only one group found in y. Nothing to compare with.')
 
     if test.startswith('Mann') or test == 't-test':
-        if comparison_type=='multiclass' and np.unique(y).shape[0]>2:
+        if (comparison_type == 'multiclass') and (np.unique(y).shape[0] > 2):
             raise ValueError(
                 """
             The {} cannot be used to compare between
@@ -87,19 +99,60 @@ def univariate_tests(
         else:
             comparison_type = 'binary_each_group'
 
+    if comparison_type == 'binary_each_group':
+        if not np.isin(control, np.array(y)):
+            raise ValueError('control not found in the y array.')
+
     if not isinstance(X, pd.DataFrame):
         X = pd.DataFrame(X)
+
+    if n_permutation_test is not None:
+        if n_permutation_test != 'all':
+            n_permutation_test = int(n_permutation_test)
+            if n_permutation_test < 1:
+                n_permutation_test = None
+
+    if n_permutation_test is not None:
+        if perm_blocks is not None:
+            assert len(perm_blocks) == len(y), (
+                'perm_blocks needs to be the same length as y, or None')
+        else:
+            perm_blocks = np.ones(len(y))
+
+    if n_permutation_test is not None:
+        # when doing permutations, data needs to be sorted by block
+        sorting_ind = np.argsort(perm_blocks)
+        unsorting_ind = np.argsort(sorting_ind)
+        X = X.iloc[sorting_ind, :]
+        y = np.array(y)[sorting_ind]
+        perm_blocks = np.array(perm_blocks)[sorting_ind]
 
     # Create the function that will test every feature of a given drug
     func = get_test_fun(test)
 
     # For each dose get significant features
-    if comparison_type=='multiclass':
+    if comparison_type == 'multiclass':
         stats, pvals = func(X, y)
         pvals = pd.DataFrame(pvals.T, index=X.columns, columns=[test])
         stats = pd.DataFrame(stats.T, index=X.columns, columns=[test])
 
-    elif comparison_type=='binary_each_group':
+        if n_permutation_test is not None:
+            # pvals become how often test stats on shuffled labels is higher
+            # than on properly ordered labels
+            pvals = pvals * 0
+            for ns, shuffled_y in enumerate(iterate_nested_shufflings(
+                    perm_blocks, y, n_shuffles=n_permutation_test)):
+                sh_stats, _ = func(X, shuffled_y)
+                sh_stats = pd.DataFrame(
+                    sh_stats.T, index=X.columns, columns=[test])
+                # accumulate events where the shuffled stats is higher than the
+                # one on correct labels
+                pvals = pvals + (sh_stats > stats).astype(int)
+            # divide for number of shuffles performed to get frequency
+            pvals = pvals / ns
+
+
+    elif comparison_type == 'binary_each_group':
         groups = np.unique(y[y!=control])
 
         pvals=[]
@@ -108,6 +161,15 @@ def univariate_tests(
 
             mask = np.isin(y,[control, grp])
             _stats, _pvals = func(X[mask], y[mask])
+
+            if n_permutation_test is not None:
+                _pvals = _pvals * 0
+                for ns, sh_y in enumerate(iterate_nested_shufflings(
+                        perm_blocks[mask], y[mask],
+                        n_shuffles=n_permutation_test)):
+                    _sh_stats, _ = func(X[mask], sh_y)
+                    _pvals = pvals + (_sh_stats > _stats).astype(int)
+                pvals = pvals / ns
 
             pvals.append(_pvals)
             stats.append(_stats)

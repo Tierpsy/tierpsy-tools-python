@@ -9,7 +9,7 @@ Created on Wed Feb 19 15:25:49 2020
 
 def plot_pca(
         x, n_dim=2, which_PCs=None, labels=None, savefig=None, closefig=False,
-        title=None, add_legend=False, colors=None):
+        title=None, add_legend=False, colors=None, **scatter_kwargs):
     """
     Plot data in PCA space in 2 or 3 dimensions. Can chose to plot any
     combination of components with which_PCs or plot the first two or three
@@ -71,10 +71,11 @@ def plot_pca(
 
     if n_dim==2:
         if labels is None:
-            plt.scatter(*Y.T)
+            plt.scatter(*Y.T, **scatter_kwargs)
         else:
             for igrp,group in enumerate(np.unique(labels)):
-                plt.scatter(*Y[labels==group,:].T,label=group,c=colors[igrp])
+                plt.scatter(*Y[labels==group,:].T,label=group,c=colors[igrp],
+                            **scatter_kwargs)
         plt.xlabel('PC 1')
         plt.ylabel('PC 2')
         if title is not None:
@@ -90,10 +91,11 @@ def plot_pca(
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         if labels is None:
-            ax.scatter(*Y.T)
+            ax.scatter(*Y.T, **scatter_kwargs)
         else:
             for igrp,group in enumerate(np.unique(labels)):
-                ax.scatter(*Y[labels==group,:].T,label=group,c=colors[igrp])
+                ax.scatter(*Y[labels==group,:].T,label=group,c=colors[igrp],
+                           **scatter_kwargs)
         ax.set_xlabel('PC 1')
         ax.set_ylabel('PC 2')
         ax.set_zlabel('PC 3')
