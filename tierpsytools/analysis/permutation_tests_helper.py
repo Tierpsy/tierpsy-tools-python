@@ -37,8 +37,15 @@ def count_nested_shuffles(categories, labels):
     # in each category, we have n! permutations if all labels are different.
     # if some repeat, it's n! divided by the product of repetitions!
     # eg 11222 => 5!/(2!3!) = 10
-    n_nested_shuffles = df.groupby(
-        'categories')['labels'].apply(count_shuffles).product()
+    n_shuffles_each_category = df.groupby(
+        'categories')['labels'].apply(count_shuffles).values.astype(int)
+    # print(n_shuffles_each_category)
+    assert n_shuffles_each_category[0].dtype == int
+
+    n_nested_shuffles = 1
+    for ss in n_shuffles_each_category:
+        n_nested_shuffles = n_nested_shuffles * ss
+
     return n_nested_shuffles
 
 
@@ -133,10 +140,10 @@ def iterate_n_nested_shufflings(labels_by_category, n_shuffles):
         the first category, then from the second one, etc.
     """
     for i in range(n_shuffles):
-        shuffled_labs = [
+        shuffled_labs = np.concatenate([
             np.random.permutation(labs) for labs in labels_by_category.values()
-        ]
-        shuffled_labs = np.ravel(shuffled_labs)
+        ], axis=0)
+        # shuffled_labs = np.ravel(shuffled_labs)
         yield shuffled_labs
 
 
@@ -179,15 +186,16 @@ def iterate_nested_shufflings(categories, labels, n_shuffles='all'):
     labs_per_cat = defaultdict(list)
     for key, val in zip(categories, labels):
         labs_per_cat[key].append(val)
-    # can we return as many shuffles as we were asked?
-    if n_shuffles != 'all':
-        n_possible_shuffles = count_nested_shuffles(categories, labels)
-        is_too_few = n_possible_shuffles <= n_shuffles
-        if is_too_few:
-            warnings.warn(
-                f'Data do not support {n_shuffles} random shuffles, '
-                f'returning {n_possible_shuffles} distinct ones instead')
-            n_shuffles = 'all'
+    # Removing following bit as it's giving more problems than it solves
+    # # can we return as many shuffles as we were asked?
+    # if n_shuffles != 'all':
+    #     n_possible_shuffles = count_nested_shuffles(categories, labels)
+    #     is_too_few = n_possible_shuffles <= n_shuffles
+    #     if is_too_few:
+    #         warnings.warn(
+    #             f'Data do not support {n_shuffles} random shuffles, '
+    #             f'returning {n_possible_shuffles} distinct ones instead')
+    #         n_shuffles = 'all'
 
     if n_shuffles == 'all':
         nested_shufflings_iter = iterate_all_nested_shufflings(labs_per_cat)
