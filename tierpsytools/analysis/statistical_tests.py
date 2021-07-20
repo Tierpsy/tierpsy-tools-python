@@ -136,6 +136,7 @@ def univariate_tests(
         stats, pvals = func(X, y)
         pvals = pd.DataFrame(pvals.T, index=X.columns, columns=[test])
         stats = pd.DataFrame(stats.T, index=X.columns, columns=[test])
+        abs_stats = stats.abs()
 
         if n_permutation_test is not None:
             # pvals become how often test stats on shuffled labels is higher
@@ -144,11 +145,11 @@ def univariate_tests(
             for ns, shuffled_y in enumerate(iterate_nested_shufflings(
                     perm_blocks, y, n_shuffles=n_permutation_test)):
                 sh_stats, _ = func(X, shuffled_y, verbose=0)
-                sh_stats = pd.DataFrame(
-                    sh_stats.T, index=X.columns, columns=[test])
+                abs_sh_stats = pd.DataFrame(
+                    sh_stats.T, index=X.columns, columns=[test]).abs()
                 # accumulate events where the shuffled stats is higher than the
                 # one on correct labels
-                pvals = pvals + (sh_stats > stats).astype(int)
+                pvals = pvals + (abs_sh_stats >= abs_stats).astype(int)
             # divide for number of shuffles performed to get frequency
             pvals = pvals / (ns + 1)
 
@@ -162,6 +163,7 @@ def univariate_tests(
 
             mask = np.isin(y,[control, grp])
             _stats, _pvals = func(X[mask], y[mask])
+            _abs_stats = np.abs(_stats)
 
             if n_permutation_test is not None:
                 _pvals = _pvals * 0
@@ -169,7 +171,8 @@ def univariate_tests(
                         perm_blocks[mask], y[mask],
                         n_shuffles=n_permutation_test))):
                     _sh_stats, _ = func(X[mask], sh_y, verbose=0)
-                    _pvals = _pvals + (_sh_stats > _stats).astype(int)
+                    _abs_sh_stats = np.abs(_sh_stats)
+                    _pvals = _pvals + (_abs_sh_stats >= _abs_stats).astype(int)
                 _pvals = _pvals / (ns + 1)
 
             pvals.append(_pvals)
