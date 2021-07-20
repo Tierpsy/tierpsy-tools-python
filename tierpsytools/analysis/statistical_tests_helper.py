@@ -64,6 +64,8 @@ def stats_test(X, y, test, vectorized, n_jobs=-1, **kwargs):
 
     """
     if vectorized:
+        if 'verbose' in kwargs:
+            kwargs.pop('verbose')
         return stats_test_vectorized(X, y, test, **kwargs)
     else:
         return stats_test_parallel(X, y, test, n_jobs, **kwargs)
@@ -78,7 +80,7 @@ def stats_test_vectorized(X, y, test, **kwargs):
     res = test(*samples, **kwargs)
     return res[0], res[1]
 
-def stats_test_parallel(X, y, test, n_jobs, **kwargs):
+def stats_test_parallel(X, y, test, n_jobs, verbose=True, **kwargs):
     from joblib import Parallel, delayed
 
     def _one_fit(ift, samples, **kwargs):
@@ -91,7 +93,7 @@ def stats_test_parallel(X, y, test, n_jobs, **kwargs):
             sp = (np.nan, np.nan)
         return ift, sp
 
-    parallel = Parallel(n_jobs=n_jobs, verbose=True)
+    parallel = Parallel(n_jobs=n_jobs, verbose=verbose)
     func = delayed(_one_fit)
 
     try:

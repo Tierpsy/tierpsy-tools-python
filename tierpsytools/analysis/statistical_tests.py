@@ -8,6 +8,7 @@ Created on Fri Nov 15 14:39:29 2019
 import pdb
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from sklearn.decomposition import PCA
 
 def univariate_tests(
@@ -142,14 +143,14 @@ def univariate_tests(
             pvals = pvals * 0
             for ns, shuffled_y in enumerate(iterate_nested_shufflings(
                     perm_blocks, y, n_shuffles=n_permutation_test)):
-                sh_stats, _ = func(X, shuffled_y)
+                sh_stats, _ = func(X, shuffled_y, verbose=0)
                 sh_stats = pd.DataFrame(
                     sh_stats.T, index=X.columns, columns=[test])
                 # accumulate events where the shuffled stats is higher than the
                 # one on correct labels
                 pvals = pvals + (sh_stats > stats).astype(int)
             # divide for number of shuffles performed to get frequency
-            pvals = pvals / ns
+            pvals = pvals / (ns + 1)
 
 
     elif comparison_type == 'binary_each_group':
@@ -164,12 +165,12 @@ def univariate_tests(
 
             if n_permutation_test is not None:
                 _pvals = _pvals * 0
-                for ns, sh_y in enumerate(iterate_nested_shufflings(
+                for ns, sh_y in enumerate(tqdm(iterate_nested_shufflings(
                         perm_blocks[mask], y[mask],
-                        n_shuffles=n_permutation_test)):
-                    _sh_stats, _ = func(X[mask], sh_y)
-                    _pvals = pvals + (_sh_stats > _stats).astype(int)
-                pvals = pvals / ns
+                        n_shuffles=n_permutation_test))):
+                    _sh_stats, _ = func(X[mask], sh_y, verbose=0)
+                    _pvals = _pvals + (_sh_stats > _stats).astype(int)
+                _pvals = _pvals / (ns + 1)
 
             pvals.append(_pvals)
             stats.append(_stats)
