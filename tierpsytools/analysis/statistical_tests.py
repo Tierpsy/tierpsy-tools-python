@@ -139,11 +139,18 @@ def univariate_tests(
         abs_stats = stats.abs()
 
         if n_permutation_test is not None:
-            # pvals become how often test stats on shuffled labels is higher
-            # than on properly ordered labels
-            pvals = pvals * 0
-            for ns, shuffled_y in enumerate(iterate_nested_shufflings(
+            # pvals become how often test stats on shuffled labels is >=
+            # than on properly ordered labels.
+            # By def the correct labelling is one of the shuffles, so start
+            # with all ones
+            pvals = pvals * 0 + 1
+            shufflings_counter = 1  # number of shufflings. Start at one bc of the unshuffled
+            for shuffled_y in tqdm(iterate_nested_shufflings(
                     perm_blocks, y, n_shuffles=n_permutation_test)):
+                # do not calculate a shuffle that is the same as the unshuffled
+                if all(shuffled_y == y):
+                    continue
+                shufflings_counter += 1
                 sh_stats, _ = func(X, shuffled_y, verbose=0)
                 abs_sh_stats = pd.DataFrame(
                     sh_stats.T, index=X.columns, columns=[test]).abs()
@@ -151,29 +158,33 @@ def univariate_tests(
                 # one on correct labels
                 pvals = pvals + (abs_sh_stats >= abs_stats).astype(int)
             # divide for number of shuffles performed to get frequency
-            pvals = pvals / (ns + 1)
-
+            pvals = pvals / shufflings_counter
 
     elif comparison_type == 'binary_each_group':
-        groups = np.unique(y[y!=control])
+        groups = np.unique(y[y != control])
 
-        pvals=[]
-        stats=[]
+        pvals = []
+        stats = []
         for igrp, grp in enumerate(groups):
 
-            mask = np.isin(y,[control, grp])
+            mask = np.isin(y, [control, grp])
             _stats, _pvals = func(X[mask], y[mask])
             _abs_stats = np.abs(_stats)
 
             if n_permutation_test is not None:
-                _pvals = _pvals * 0
-                for ns, sh_y in enumerate(tqdm(iterate_nested_shufflings(
+                _pvals = _pvals * 0 + 1
+                shufflings_counter = 1
+                for sh_y in tqdm(iterate_nested_shufflings(
                         perm_blocks[mask], y[mask],
-                        n_shuffles=n_permutation_test))):
+                        n_shuffles=n_permutation_test)):
+                    # skip if shuffled same as unshuffled
+                    if all(sh_y == y[mask]):
+                        continue
+                    shufflings_counter += 1
                     _sh_stats, _ = func(X[mask], sh_y, verbose=0)
                     _abs_sh_stats = np.abs(_sh_stats)
                     _pvals = _pvals + (_abs_sh_stats >= _abs_stats).astype(int)
-                _pvals = _pvals / (ns + 1)
+                _pvals = _pvals / shufflings_counter
 
             pvals.append(_pvals)
             stats.append(_stats)

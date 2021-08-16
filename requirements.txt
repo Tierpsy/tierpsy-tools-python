@@ -8,6 +8,5 @@ matplotlib
 scikit-learn
 opencv
 pytables
-imgstore
 fire
 tqdm

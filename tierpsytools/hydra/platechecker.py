@@ -109,7 +109,7 @@ def postprocess(img):
     img = cv2.adaptiveThreshold(
         img, 255,
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 25)
-    return
+    return img
 
 
 def get_plate_id_from_frame(frame):
