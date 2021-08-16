@@ -31,6 +31,7 @@ Firt, install the dependences with:
 
 ```bash
 conda install --file requirements.txt
+pip install imgstore
 ```
 
 Then install the tierpsytools package with:
