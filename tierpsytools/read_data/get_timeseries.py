@@ -39,7 +39,7 @@ def get_timeseries(root_dir, select_keywords=None, drop_keywords=None,
         file_time = time()
         print('Reading timeseries from file {} of {}'.format(
             ifl+1, filenames.shape[0]))
-        timeseries = read_timeseries(file, only_wells=only_wells)
+        timeseries = read_timeseries(file, names=names, only_wells=only_wells)
         data[fileid] = timeseries
         print('File read in {} sec.'.format(time()-file_time))
     print('Done reading in {} sec.'.format(time()-start_time))
@@ -57,9 +57,10 @@ def read_timeseries(filename, names=None, only_wells=None):
                      If None, the timeseries will not be filtered by well
                      (good for legacy data)
     """
-    assert isinstance(only_wells, list), 'only_wells must be a list'
-    assert all(isinstance(well, str) for well in only_wells), \
-        'only_wells must be a list'
+    if only_wells is not None:
+      assert isinstance(only_wells, list), 'only_wells must be a list, or None'
+      assert all(isinstance(well, str) for well in only_wells), \
+          'only_wells must be a list of strings'
     with pd.HDFStore(filename, 'r') as f:
         if only_wells is None:
             series = f['timeseries_data']
