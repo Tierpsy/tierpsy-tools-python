@@ -28,7 +28,11 @@ def get_camera_serial(
     """
     from tierpsytools.hydra import CAM2CH_df, UPRIGHT_96WP, UPRIGHT_6WP
 
-    if not n_wells == 6 or n_wells == 96:
+    if n_wells == 6:
+        UPRIGHT_DF = UPRIGHT_6WP
+    elif n_wells == 96:
+        UPRIGHT_DF = UPRIGHT_96WP
+    else:
         raise ValueError('Only 96-well or 6-well plates are supported at the moment.')
         
     channels = ['Ch{}'.format(i) for i in range(1,7,1)]
@@ -36,10 +40,7 @@ def get_camera_serial(
     WELL2CH = []
     for ch in channels:
         
-        if n_wells == 96:
-            chdf = pd.DataFrame(UPRIGHT_96WP[ch].values.reshape(-1,1), columns=['well_name'])            
-        elif n_wells == 6:
-            chdf = pd.DataFrame(UPRIGHT_6WP[ch].values.reshape(-1,1), columns=['well_name'])
+        chdf = pd.DataFrame(UPRIGHT_DF[ch].values.reshape(-1,1), columns=['well_name'])            
             
         chdf['channel'] = ch
         WELL2CH.append(chdf)
