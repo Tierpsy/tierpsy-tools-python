@@ -106,7 +106,7 @@ def add_imgstore_name(metadata, raw_day_dir, n_wells=96,
     # if the raw_day_dir contains a date in yyyymmdd format, check if the date 
     # in raw_day_dir matches the date of runs stored in the metadata dataframe
     date_of_runs = metadata['date_yyyymmdd'].astype(str).values[0]
-    date_in_dir = re.findall(r'(\d{8})',raw_day_dir.stem)
+    date_in_dir = re.findall(r'(20\d{6})',raw_day_dir.stem)
     if len(date_in_dir)==1 and date_of_runs != date_in_dir[0]:
         warnings.warn(
             '\nThe date in the RawVideos day directory does not match ' +
@@ -116,10 +116,7 @@ def add_imgstore_name(metadata, raw_day_dir, n_wells=96,
         return metadata
 
     # add camera serial number to metadata
-    if n_wells == 6 or n_wells == 96:
-        metadata = get_camera_serial(metadata, n_wells=n_wells)
-    else:
-        raise IOError("n_wells not supported! Only 96 and 6 wells are supported")
+    metadata = get_camera_serial(metadata, n_wells=n_wells)
 
     # get imgstore full paths = raw video directories that contain a
     # metadata.yaml file and get the run and camera number from the names
