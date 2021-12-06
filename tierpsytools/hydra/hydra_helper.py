@@ -3,7 +3,7 @@
 """
 Created on Mon Dec  2 15:29:20 2019
 
-@author: em812
+@author: em812 (modified by: sm5911 on 06/12/21)
 """
 import re
 import numpy as np
@@ -26,29 +26,25 @@ def get_camera_serial(
             Day metadata dataframe including camera serial
 
     """
-    from tierpsytools.hydra import CAM2CH_df, UPRIGHT_96WP
+    from tierpsytools.hydra import CAM2CH_df, UPRIGHT_96WP, UPRIGHT_6WP
 
     if not n_wells == 6 or n_wells == 96:
         raise ValueError('Only 96-well or 6-well plates are supported at the moment.')
         
     channels = ['Ch{}'.format(i) for i in range(1,7,1)]
 
-    if n_wells == 96:
-        WELL2CH = []
-        for ch in channels:
-            chdf = pd.DataFrame(UPRIGHT_96WP[ch].values.reshape(-1,1),
-                                columns=['well_name'])
-            chdf['channel'] = ch
-            WELL2CH.append(chdf)
-        WELL2CH = pd.concat(WELL2CH, axis=0)
-    
-    elif n_wells == 6:
-        assert 'channel' in metadata.columns
-        if not 'well_name' in metadata.columns or metadata['well_name'].isna().any():
-            metadata['well_name'] = metadata['channel'].astype(str)
+    WELL2CH = []
+    for ch in channels:
+        
+        if n_wells == 96:
+            chdf = pd.DataFrame(UPRIGHT_96WP[ch].values.reshape(-1,1), columns=['well_name'])            
+        elif n_wells == 6:
+            chdf = pd.DataFrame(UPRIGHT_6WP[ch].values.reshape(-1,1), columns=['well_name'])
             
-        WELL2CH = pd.DataFrame(zip([str(i) for i in range(1,7,1)], channels), 
-                               columns=['well_name', 'channel'])
+        chdf['channel'] = ch
+        WELL2CH.append(chdf)
+        
+    WELL2CH = pd.concat(WELL2CH, axis=0)
         
     WELL2CAM = pd.merge(
             CAM2CH_df,WELL2CH,
