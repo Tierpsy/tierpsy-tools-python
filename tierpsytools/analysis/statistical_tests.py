@@ -129,7 +129,7 @@ def univariate_tests(
         perm_blocks = np.array(perm_blocks)[sorting_ind]
 
     # Create the function that will test every feature of a given drug
-    func = get_test_fun(test)
+    func = get_test_fun(test, n_jobs=n_jobs)
 
     # For each dose get significant features
     if comparison_type == 'multiclass':
