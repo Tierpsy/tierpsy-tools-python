@@ -75,3 +75,11 @@ UPRIGHT_96WP = pd.DataFrame.from_dict({
     ('Ch6',3):['E12','F12','G12','H12']
     })
 
+UPRIGHT_6WP = pd.DataFrame.from_dict({
+    ('Ch1',0):['A1'],
+    ('Ch2',0):['B1'],
+    ('Ch3',0):['A2'],
+    ('Ch4',0):['B2'],
+    ('Ch5',0):['A3'],
+    ('Ch6',0):['B3']
+    })
