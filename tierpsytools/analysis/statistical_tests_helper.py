@@ -10,15 +10,18 @@ from functools import partial
 import pdb
 
 #%% Define statistical test functions
-def get_test_fun(test, vectorized=False):
+def get_test_fun(test, n_jobs=-1):
     from scipy.stats import kruskal, mannwhitneyu, f_oneway, ttest_ind
 
     if test == 'ANOVA':
         func = partial(stats_test, test=f_oneway, vectorized=True)
     elif test.startswith('Kruskal'):
-        func = partial(stats_test, test=kruskal, nan_policy='raise', vectorized=False)
+        func = partial(
+            stats_test, test=kruskal, nan_policy='raise',
+            vectorized=False, n_jobs=n_jobs)
     elif test.startswith('Mann-Whitney'):
-        func = partial(stats_test, test=mannwhitneyu, vectorized=False)
+        func = partial(
+            stats_test, test=mannwhitneyu, vectorized=False, n_jobs=n_jobs)
     elif test == 't-test':
         func = partial(stats_test, test=ttest_ind, vectorized=True)
     else:
