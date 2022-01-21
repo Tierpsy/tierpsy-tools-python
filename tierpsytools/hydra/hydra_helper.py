@@ -34,24 +34,24 @@ def get_camera_serial(
         UPRIGHT_DF = UPRIGHT_96WP
     else:
         raise ValueError('Only 96-well or 6-well plates are supported at the moment.')
-        
+
     channels = ['Ch{}'.format(i) for i in range(1,7,1)]
 
     WELL2CH = []
     for ch in channels:
-        
-        chdf = pd.DataFrame(UPRIGHT_DF[ch].values.reshape(-1,1), columns=['well_name'])            
-            
+
+        chdf = pd.DataFrame(UPRIGHT_DF[ch].values.reshape(-1,1), columns=['well_name'])
+
         chdf['channel'] = ch
         WELL2CH.append(chdf)
-        
+
     WELL2CH = pd.concat(WELL2CH, axis=0)
-        
+
     WELL2CAM = pd.merge(
             CAM2CH_df,WELL2CH,
             how='outer',on='channel'
             ).sort_values(by=['rig','channel','well_name'])
-    
+
     # keep only the instruments that exist in the metadata
     WELL2CAM = WELL2CAM[WELL2CAM['rig'].isin(metadata['instrument_name'])]
 
@@ -64,7 +64,7 @@ def get_camera_serial(
             how='outer',left_on=['instrument_name','well_name'],
             right_on=['instrument_name','well_name']
             )
-        
+
     if not out_metadata.shape[0] == metadata.shape[0]:
         raise Exception('Wells missing from plate metadata.')
 
@@ -74,21 +74,21 @@ def get_camera_serial(
     return out_metadata
 
 
-def add_imgstore_name(metadata, raw_day_dir, n_wells=96, 
+def add_imgstore_name(metadata, raw_day_dir, n_wells=96,
                       run_number_regex=r'run\d+_'):
     """
     Add the imgstore name of the hydra videos to the day metadata dataframe
     Inputs:
         metadata = pandas dataframe
-            Dataframe with metadata for a given day of experiments. 
+            Dataframe with metadata for a given day of experiments.
             See README.md for details on fields.
         raw_day_dir = path to directory
-            RawVideos root directory of the specific day, 
+            RawVideos root directory of the specific day,
             where the imgstore names can be found.
         n_wells = integer
-            Number of wells in imaging plate 
+            Number of wells in imaging plate
             (only 96 and 6 are supported at the moment)
-            NB: if n_wells != 96, 'camera_serial' information 
+            NB: if n_wells != 96, 'camera_serial' information
                 must exist in metadata (with no missing entries)
 
     Returns:
@@ -99,18 +99,18 @@ def add_imgstore_name(metadata, raw_day_dir, n_wells=96,
     # check if raw_day_dir exists
     if not raw_day_dir.exists:
         warnings.warn("\nRawVideos day directory was not found. " +
-                      "Imgstore names cannot be added to the metadata.\n" + 
+                      "Imgstore names cannot be added to the metadata.\n" +
                       "Path {} not found.".format(raw_day_dir))
         return metadata
 
-    # if the raw_day_dir contains a date in yyyymmdd format, check if the date 
+    # if the raw_day_dir contains a date in yyyymmdd format, check if the date
     # in raw_day_dir matches the date of runs stored in the metadata dataframe
     date_of_runs = metadata['date_yyyymmdd'].astype(str).values[0]
     date_in_dir = re.findall(r'(20\d{6})',raw_day_dir.stem)
     if len(date_in_dir)==1 and date_of_runs != date_in_dir[0]:
         warnings.warn(
             '\nThe date in the RawVideos day directory does not match ' +
-            'the date_yyyymmdd in the day metadata dataframe. ' + 
+            'the date_yyyymmdd in the day metadata dataframe. ' +
             'Imgstore names cannot be added to the metadata.\n' +
             'Please check the dates and try again.')
         return metadata
@@ -123,7 +123,7 @@ def add_imgstore_name(metadata, raw_day_dir, n_wells=96,
     file_list = [file for file in raw_day_dir.rglob("metadata.yaml")]
     camera_serial = [str(file.parent.parts[-1]).split('.')[-1] for file in file_list]
 
-    imaging_run_number = run_number_from_regex(file_list, run_number_regex=r'run\d+_')
+    imaging_run_number = run_number_from_regex(file_list, run_number_regex)
 
     file_meta = pd.DataFrame({'file_name': file_list,
                               'camera_serial': camera_serial,
@@ -134,22 +134,22 @@ def add_imgstore_name(metadata, raw_day_dir, n_wells=96,
         lambda x: "/".join(x.parts[-3:-1]))
 
     # merge dataframes to store imgstore_name for each metadata row
-    out_metadata = pd.merge(metadata, 
+    out_metadata = pd.merge(metadata,
                             file_meta[['imaging_run_number',
                                        'camera_serial',
                                        'imgstore_name']],
-                            how='outer', 
+                            how='outer',
                             on=['imaging_run_number',
                                 'camera_serial'])
-        
+
     # check if there are missing videos. If yes, raise a warning.
     # (we expect to have videos from every camera of a given instrument)
     if out_metadata['imgstore_name'].isna().sum()>0:
         not_found = out_metadata.loc[out_metadata['imgstore_name'].isna(),
                                      ['imaging_run_number', 'camera_serial']]
         for i,row in not_found.iterrows():
-            warnings.warn('\n\nNo video found for day ' + 
-                          '{}, run {}, camera {}.\n\n'.format(raw_day_dir.stem, 
+            warnings.warn('\n\nNo video found for day ' +
+                          '{}, run {}, camera {}.\n\n'.format(raw_day_dir.stem,
                                                               *row.values))
 
     return out_metadata
