@@ -47,7 +47,8 @@ class ExtraDataReader(object):
         self.extra_data = None
 
     def _get_extra_data(self):
-        """Only called by the __init__"""
+        """Only called by another method"""
+        # really I should be using property decorators here
         if self.store is None:
             extra_data_fnames = list(self.filename.parent.glob('*' + self.ext))
             # print(extra_data_fnames)
@@ -142,10 +143,14 @@ def plot_imagingset_sensordata(setname, setdata):
     for i, row in setdata.iterrows():
         # use the class above
         edr = ExtraDataReader(row['full_path'])
-        df = edr.get_extra_data(includeonly=['light', 'tempi',
-                                             'tempo', 'humidity'])
-        df['channel'] = row['channel']
-        edr_df.append(df)
+        try:
+            df = edr.get_extra_data(
+                includeonly=['light', 'tempi', 'tempo', 'humidity'])
+            df['channel'] = row['channel']
+            edr_df.append(df)
+        except (FileNotFoundError, IOError):
+            warnings.warn(f"No sensor data for: {row['full_path']}")
+
         # read first frame as well
         if row['channel'] == 'Ch1':
             try:
