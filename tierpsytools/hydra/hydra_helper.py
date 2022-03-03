@@ -55,6 +55,12 @@ def get_camera_serial(
     # keep only the instruments that exist in the metadata
     WELL2CAM = WELL2CAM[WELL2CAM['rig'].isin(metadata['instrument_name'])]
 
+    # keep only the camera channels that exist in the metadata (using 'well_name' information)
+    for rig in WELL2CAM['rig'].unique():
+        rig_wells_meta = metadata.groupby('instrument_name').get_group(rig)['well_name'].unique()
+        WELL2CAM = WELL2CAM[~np.logical_and(WELL2CAM['rig']==rig, 
+                                            ~WELL2CAM['well_name'].isin(rig_wells_meta))]
+        
     # Rename 'rig' to 'instrument_name'
     WELL2CAM = WELL2CAM.rename(columns={'rig':'instrument_name'})
 
