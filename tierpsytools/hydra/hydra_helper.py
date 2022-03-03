@@ -54,14 +54,14 @@ def get_camera_serial(
 
     # keep only the instruments that exist in the metadata
     WELL2CAM = WELL2CAM[WELL2CAM['rig'].isin(metadata['instrument_name'])]
-
+        
     # Rename 'rig' to 'instrument_name'
     WELL2CAM = WELL2CAM.rename(columns={'rig':'instrument_name'})
 
     # Add camera number to metadata
     out_metadata = pd.merge(
             metadata,WELL2CAM[['instrument_name','well_name','camera_serial']],
-            how='outer',left_on=['instrument_name','well_name'],
+            how='left',left_on=['instrument_name','well_name'],
             right_on=['instrument_name','well_name']
             )
 
