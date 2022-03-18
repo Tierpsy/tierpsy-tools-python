@@ -11,9 +11,11 @@ from pathlib import Path
 from warnings import warn
 import pdb
 
+from tierpsytools.hydra.hydra_filenames_helper import parse_camera_serial
+
 def read_hydra_metadata(
         feat_file, fname_file, meta_file,
-        feat_id_cols = ['file_id', 'n_skeletons', 'well_name', 'is_good_well'],
+        feat_id_cols=['file_id', 'n_skeletons', 'well_name', 'is_good_well'],
         add_bluelight=True,
         bluelight_labels=['prestim', 'bluelight', 'poststim']):
 
@@ -31,7 +33,7 @@ def read_hydra_metadata(
     meta : file path to metadata file
     feat_id_cols : list of strings, optional
         The columns in the feat dataframe that are not features.
-        The default is ['file_id', 'well_name', 'is_good_well'].
+        The default is ['file_id', 'n_skeletons', 'well_name', 'is_good_well'].
     add_bluelight : bool, optional
         Add a metadata column that specifies the bluelight condition for each row.
         The default is True.
@@ -47,13 +49,97 @@ def read_hydra_metadata(
         Metadata dataframe matching the returned feat dataframe row-by-row.
 
     """
-    feat, fname, meta = _read_files(feat_file, fname_file, meta_file, comment='#')
+    feat, fname, meta = _read_files(
+        feat_file, fname_file, meta_file, comment='#')
 
-    feat,meta = build_matching_feat_meta(
-        feat, fname, meta, feat_id_cols = feat_id_cols,
+    if _does_it_need_6WP_patch(feat, fname, meta):
+        feat, fname = patch_6WP(feat, fname, feat_id_cols=feat_id_cols)
+
+    feat, meta = build_matching_feat_meta(
+        feat, fname, meta, feat_id_cols=feat_id_cols,
         add_bluelight=add_bluelight, bluelight_labels=bluelight_labels)
 
     return feat, meta
+
+
+def _does_it_need_6WP_patch(feat, fname, meta):
+    """
+    _does_it_need_6WP_patch
+    Check if `feat` has the `well_name` and `is_good_well` columns.
+    When they are missing, it means tierpsy was run without FOV splitting,
+    which on the hydra is treates as a 6WP (one well per channel).
+    Since the downstream functions rely on `well_name` existing for
+    data-metadata linkage, infer the `well_name` by the camera serial number
+    and add to `feat` dataframe
+
+    Parameters
+    ----------
+    feat : pd.DataFrame
+        content of features_summary file
+    fname : pd.DataFrame
+        content of filenames_summary file
+    meta : pd.DataFrame
+        content of metadata file
+
+    Returns
+    -------
+    bool
+        True if the summaries are without well_name i.e. of a 6WP experiment
+
+    Raises
+    ------
+    ValueError
+        if no well_name in the summaries, but well_name in meta has wells
+        outside the A1:B3 range!!
+    """
+    is_to_patch = (
+        ('well_name' not in feat)
+        and ('is_good_well' not in feat)
+        and ('well_name' in meta)
+        )
+    if is_to_patch:
+        from tierpsytools.hydra import UPRIGHT_6WP
+        wells_6WP = UPRIGHT_6WP.values.ravel().tolist()
+        if not meta['well_name'].isin(wells_6WP).all():
+            raise ValueError(
+                'Detected summaries compatible with 6WP, '
+                'but metadata have wells outside the A1:B3 range. '
+                'Aborting to prevent wrong data <-> metadata matching.'
+                )
+    return is_to_patch
+
+
+def patch_6WP(
+        feat, fname,
+        feat_id_cols=['file_id', 'n_skeletons', 'well_name', 'is_good_well']):
+
+    from tierpsytools.hydra import UPRIGHT_6WP
+    from tierpsytools.hydra.hydra_filenames_helper import (
+        parse_camera_serial, serial2channel)
+
+    def _filename2well(file_path):
+        serial = parse_camera_serial(file_path)
+        channel = serial2channel(serial)
+        well_name = UPRIGHT_6WP.loc[0, (channel, 0)]
+        return well_name
+
+    _fname_cols = fname.columns
+    filename = _get_filename_column(fname)
+    fname['well_name'] = fname[filename].apply(_filename2well)
+    fname['is_good_well'] = True
+
+    feat = pd.merge(
+        left=fname[['file_id', 'well_name', 'is_good_well']], right=feat,
+        on='file_id', how='right',
+        )
+
+    # tidy up output so fname only has the right columns,
+    # and the order is right in feat
+    reordered_cols = feat_id_cols + [c for c in feat if c not in feat_id_cols]
+    feat = feat[reordered_cols]
+    fname = fname[_fname_cols]
+
+    return feat, fname
 
 
 def build_matching_feat_meta(
@@ -99,12 +185,7 @@ def build_matching_feat_meta(
         Metadata dataframe matching the returned feat dataframe row-by-row.
 
     """
-    if 'filename' in fname:
-        filename = 'filename'
-    elif 'file_name' in fname:
-        filename = 'file_name'
-    else:
-        raise ValueError('The filenames dataframe needs to have a filename column.')
+    filename = _get_filename_column(fname)
 
     fname['imgstore_name'] = fname[filename].apply(
         lambda x: _imgstore_name_from_filename(x,path_levels=[-3,-1]))
@@ -294,9 +375,26 @@ def _imgstore_name_from_filename(filename, path_levels=[-3,-1]):
     imgstore_name = '/'.join(Path(filename).parts[path_levels[0]:path_levels[1]])
     return imgstore_name
 
+
 def _read_files(feat_file, fname_file, metadata_file, comment='#'):
-    feat = pd.read_csv(feat_file, comment='#')
-    fname = pd.read_csv(fname_file, comment='#')
+    if 'filenames' not in str(fname_file):
+        warn(
+            'The word "filenames" does not appear in fname_file, please check')
+    if 'features' not in str(feat_file):
+        warn('The word "features" does not appear in feat_file, please check')
+    feat = pd.read_csv(feat_file, comment=comment)
+    fname = pd.read_csv(fname_file, comment=comment)
     meta = pd.read_csv(metadata_file, index_col=None)
 
     return feat, fname, meta
+
+
+def _get_filename_column(fname):
+    if 'filename' in fname:
+        filename = 'filename'
+    elif 'file_name' in fname:
+        filename = 'file_name'
+    else:
+        raise ValueError(
+            'The filenames dataframe needs to have a filename column.')
+    return filename

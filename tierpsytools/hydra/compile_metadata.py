@@ -14,12 +14,133 @@ import warnings
 import numpy as np
 
 #%% General functions for all types of experiments
-def populate_96WPs(worm_sorter,
-                   n_columns=12,
-                   n_rows=8,
-                   saveto=None,
-                   del_if_exists=False
-                   ):
+def populate_6WPs(worm_sorter, saveto=None, del_if_exists=False):
+    """
+    populate_6WPs Wrapper for populate_MWPs(n_columns=3, n_rows=2, **kwargs)
+    Function to explode summary info in wormsorter files and create
+    plate_metadata with all the information per well per unique imaging plate.
+    Works with plates that have been filled row-wise and column-wise
+    consecutively
+
+    Parameters
+    ----------
+    worm_sorter : .csv file with headers 'start_well', 'end_well' and details
+        of strains and media in range of wells.
+    saveto : None, 'default' or path to csv file
+        If None, the plate metadata will not be saved in a file.
+        If 'default', the plate_metadata will be saved in a csv at the same
+        location as the wormsorter file.
+        If path, the plate_metadata will be saved in a csv at the path location.
+        The default is None.
+    del_if_exists : Bool, optional
+        If a file is found at the location specified in saveto and del_if_exists
+        is True, then the file will be deleted and regenerated. If del_if_exists
+        is False, then the file will not be deleted and the function will exit
+        with error. The default is False.
+
+    Returns
+    -------
+    plate_metadata: one line per well; can be used in get_day_metadata
+            function to compile with manual metadata
+    """
+    plate_metadata = populate_MWPs(
+        worm_sorter,
+        n_rows=2, n_columns=3,
+        saveto=saveto, del_if_exists=del_if_exists
+        )
+    return plate_metadata
+
+
+def populate_24WPs(worm_sorter, saveto=None, del_if_exists=False):
+    """
+    populate_24WPs Wrapper for populate_MWPs(n_columns=6, n_rows=4, **kwargs)
+    Function to explode summary info in wormsorter files and create
+    plate_metadata with all the information per well per unique imaging plate.
+    Works with plates that have been filled row-wise and column-wise
+    consecutively
+
+    Parameters
+    ----------
+    worm_sorter : .csv file with headers 'start_well', 'end_well' and details
+        of strains and media in range of wells.
+    saveto : None, 'default' or path to csv file
+        If None, the plate metadata will not be saved in a file.
+        If 'default', the plate_metadata will be saved in a csv at the same
+        location as the wormsorter file.
+        If path, the plate_metadata will be saved in a csv at the path location.
+        The default is None.
+    del_if_exists : Bool, optional
+        If a file is found at the location specified in saveto and del_if_exists
+        is True, then the file will be deleted and regenerated. If del_if_exists
+        is False, then the file will not be deleted and the function will exit
+        with error. The default is False.
+
+    Returns
+    -------
+    plate_metadata: one line per well; can be used in get_day_metadata
+            function to compile with manual metadata
+    """
+
+    plate_metadata = populate_MWPs(
+        worm_sorter,
+        n_rows=4, n_columns=6,
+        saveto=saveto, del_if_exists=del_if_exists
+        )
+    return plate_metadata
+
+
+def populate_96WPs(worm_sorter, saveto=None, del_if_exists=False, **kwargs):
+    """
+    populate_96WPs Wrapper for populate_MWPs(n_columns=12, n_rows=8, **kwargs)
+    Function to explode summary info in wormsorter files and create
+    plate_metadata with all the information per well per unique imaging plate.
+    Works with plates that have been filled row-wise and column-wise
+    consecutively
+
+    Parameters
+    ----------
+    worm_sorter : .csv file with headers 'start_well', 'end_well' and details
+        of strains and media in range of wells.
+    saveto : None, 'default' or path to csv file
+        If None, the plate metadata will not be saved in a file.
+        If 'default', the plate_metadata will be saved in a csv at the same
+        location as the wormsorter file.
+        If path, the plate_metadata will be saved in a csv at the path location.
+        The default is None.
+    del_if_exists : Bool, optional
+        If a file is found at the location specified in saveto and del_if_exists
+        is True, then the file will be deleted and regenerated. If del_if_exists
+        is False, then the file will not be deleted and the function will exit
+        with error. The default is False.
+
+    Returns
+    -------
+    plate_metadata: one line per well; can be used in get_day_metadata
+            function to compile with manual metadata
+    """
+    for k in ['n_columns', 'n_rows']:
+        if k in kwargs:
+            warnings.warn(
+                f'Passing {k} to populate_96WPs is deprecated.'
+                '`populate_96WPs(...)` is a wrapper for '
+                '`populate_MWPs(..., n_columns=12, n_rows=8)`. '
+                'A future update will ignore n_columns and n_rows '
+                'passed to this function. '
+                'Please update your code'
+            )
+    n_rows = kwargs['n_rows'] if 'n_rows' in kwargs else 8
+    n_columns = kwargs['n_columns'] if 'n_columns' in kwargs else 12
+
+    plate_metadata = populate_MWPs(
+        worm_sorter,
+        n_rows=8, n_columns=12,
+        saveto=saveto, del_if_exists=del_if_exists
+        )
+    return plate_metadata
+
+
+def populate_MWPs(
+        worm_sorter, n_columns=12, n_rows=8, saveto=None, del_if_exists=False):
     """
     @author: ilbarlow
 
@@ -597,7 +718,7 @@ def merge_robot_wormsorter(day_root_dir,
                            bad_wells_csv=None, # check condition where no bad_wells_csv
                            merge_on=['imaging_plate_id', 'well_name'],
                            saveto=None,
-                           del_if_exists=False
+                           del_if_exists=False,
                            ):
     """
     author: @ilbarlow
