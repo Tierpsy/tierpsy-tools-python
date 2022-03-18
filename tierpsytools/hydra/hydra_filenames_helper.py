@@ -99,6 +99,28 @@ def parse_camera_serial(filename):
     return camera_serial
 
 
+def serial2rigchannel(camera_serial):
+    """
+    Takes camera serial number, returns a (rig, channel) tuple
+    """
+    out = CAM2CH_df[CAM2CH_df['camera_serial']==camera_serial]
+    if len(out) == 0:
+        raise ValueError('{} unknown as camera serial string'.format(camera_serial))
+    elif len(out) == 1:
+        return tuple(out[['rig','channel']].values[0])
+    else:
+        raise Exception('Multiple hits for {}. split_fov/helper.py corrupted?'.format(camera_serial))
+
+
+def serial2channel(camera_serial):
+    """
+    Takes camera serial number, returns the channel
+    """
+    return serial2rigchannel(camera_serial)[1]
+
+
+
+
 def find_imgstore_videos(target):
     """
     find_imgstore_videos scans the target directory, or the target files list,
