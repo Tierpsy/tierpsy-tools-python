@@ -18,12 +18,11 @@ trajectories throughout the video, for the entire 96-well plate (imaged under
 
 import sys
 import h5py
-import tqdm
 import argparse
 import pandas as pd
 from matplotlib import pyplot as plt
 from pathlib import Path
-
+from tqdm import tqdm
 from tierpsytools.hydra.hydra_filenames_helper import CAM2CH_df, serial2channel, parse_camera_serial
 
 #%% Channel-to-plate mapping dictionary (global)
@@ -134,6 +133,7 @@ def feat2raw(featfilepath):
 
 
 def get_frame_from_raw(rawvidname):
+    
     from tierpsy.analysis.compress.selectVideoReader import selectVideoReader
 
     vid = selectVideoReader(str(rawvidname))
@@ -215,8 +215,10 @@ def plot_plate_trajectories_from_filenames_summary(filenames_path, saveDir):
     """ Plot plate trajectories for all files in Tierpsy filenames summaries
         'filenames_path', and save results to 'saveDir' """
 
+    from tierpsytools.read_data.hydra_metadata import _get_filename_column
+
     filenames_df = pd.read_csv(filenames_path, comment='#')
-    filenames_list = filenames_df[filenames_df['is_good']==True]['file_name']
+    filenames_list = filenames_df[filenames_df['is_good']==True][_get_filename_column(filenames_path)]
 
     filestem_list = []
     featurefile_list = []
@@ -246,11 +248,10 @@ if __name__ == "__main__":
     # default to example file if none given
     parser.add_argument("--input", help="input file path (featuresN)",
                         default=example_featuresN)
-    # default to input's grandparent if non given
+    # default to input's grandparent if none given
     known_args = parser.parse_known_args()
     parser.add_argument("--output", help="output directory path (for saving)",
                         default=Path(known_args[0].input).parent.parent)
-
     # parser.add_argument("--downsample", help="downsample trajectory data by plotting the worm centroid for every 'nth' frame",
     #                     default=10)
     args = parser.parse_args()
@@ -258,5 +259,3 @@ if __name__ == "__main__":
     print("Output directory:", args.output)
 
     plot_plate_trajectories(args.input, saveDir=args.output, downsample=10)
-
-
