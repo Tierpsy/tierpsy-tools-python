@@ -24,9 +24,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from pathlib import Path
 
-from tierpsy.analysis.split_fov.FOVMultiWellsSplitter import FOVMultiWellsSplitter
-from tierpsy.analysis.split_fov.helper import CAM2CH_df, serial2channel, parse_camera_serial
-from tierpsy.analysis.compress.selectVideoReader import selectVideoReader
+from tierpsytools.hydra.hydra_filenames_helper import CAM2CH_df, serial2channel, parse_camera_serial
 
 #%% Channel-to-plate mapping dictionary (global)
 
@@ -136,6 +134,8 @@ def feat2raw(featfilepath):
 
 
 def get_frame_from_raw(rawvidname):
+    from tierpsy.analysis.compress.selectVideoReader import selectVideoReader
+
     vid = selectVideoReader(str(rawvidname))
     status, frame = vid.read_frame(0)
     assert status == 1, f'Something went wrong while reading {rawvidname}'
@@ -145,6 +145,8 @@ def get_frame_from_raw(rawvidname):
 def plot_plate_trajectories(featurefilepath, saveDir=None, downsample=10):
     """ Tile plots and merge into a single plot for the
         entire 96-well plate, correcting for camera orientation. """
+
+    from tierpsy.analysis.split_fov.FOVMultiWellsSplitter import FOVMultiWellsSplitter
 
     file_dict = get_video_set(featurefilepath)
 

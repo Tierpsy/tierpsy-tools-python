@@ -39,6 +39,7 @@ Description: # tierpsytools
         
         ```bash
         conda install --file requirements.txt
+        pip install imgstore
         ```
         
         Then install the tierpsytools package with:
