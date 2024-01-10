@@ -1,6 +1,6 @@
 # tierpsytools
 
-tierpsytools is a Python library for dealing with metadata in worm screening experiments and tierpsy feature processing.
+tierpsytools is a Python library for dealing with metadata in worm screening experiments and tierpsy feature processing. Weheliye
 
 ## Installation
 It is recommended to create an environmemt to install tierpsytools in. In conda you can create an environmnet called tierpsytools with:
