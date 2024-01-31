@@ -15,7 +15,7 @@ trajectories throughout the video, for the entire 96-well plate (imaged under
 """
 
 #%% Imports
-
+import cv2
 import sys
 import h5py
 import tqdm
@@ -141,8 +141,39 @@ def get_frame_from_raw(rawvidname):
     assert status == 1, f'Something went wrong while reading {rawvidname}'
     return frame
 
+def plot_6wellplate(img,is_rotate180=False, ax=None, line_thickness=20):
+  
+        """
+        Plot the fitted wells, the wells separation, and the name of the well.
+        (only if these things are present!)"""
 
-def plot_plate_trajectories(featurefilepath, saveDir=None, downsample=10):
+        # make sure I'm not working on the original image
+        if is_rotate180:
+            # a rotation is 2 reflections
+            _img = cv2.cvtColor(img.copy()[::-1, ::-1],
+                                cv2.COLOR_GRAY2BGR)
+        else:
+            _img = cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2BGR)
+#        pdb.set_trace()
+        # flags: according to dataframe state, do or do not do
+        # add names of wells
+        # plot, don't close
+        if not ax:
+            figsize = (8, 8*_img.shape[0]/_img.shape[1])
+            fig = plt.figure(figsize=figsize)
+            ax = plt.Axes(fig, [0., 0., 1., 1.])
+            ax.set_axis_off()
+            fig.add_axes(ax)
+        else:
+            fig = ax.figure
+            ax.set_axis_off()
+
+        ax.imshow(_img)
+     
+#        plt.axis('off')
+        # plt.tight_layout()
+        return fig
+def plot_plate_trajectories(featurefilepath, saveDir=None, downsample=10, fov= False):
     """ Tile plots and merge into a single plot for the
         entire 96-well plate, correcting for camera orientation. """
 
@@ -179,20 +210,27 @@ def plot_plate_trajectories(featurefilepath, saveDir=None, downsample=10):
         ax = axs[_loc]
 
         # plot first frame of video + annotate wells
-        fovsplitter = FOVMultiWellsSplitter(ch_featfilepath)
-        # let's check if the fovsplitter managed to get a frame automatically
-        if fovsplitter.img is None:
-            fovsplitter.img = get_frame_from_raw(feat2raw(ch_featfilepath))
+        if fov:
+            fovsplitter = FOVMultiWellsSplitter(ch_featfilepath)
+            # let's check if the fovsplitter managed to get a frame automatically
+            if fovsplitter.img is None:
+                fovsplitter.img = get_frame_from_raw(feat2raw(ch_featfilepath))
+            img_shape = fovsplitter.img_shape
 
-        fovsplitter.plot_wells(is_rotate180=rotate, ax=ax, line_thickness=10)
-
+            fovsplitter.plot_wells(is_rotate180=rotate, ax=ax, line_thickness=10)
+        if not fov:
+            vid = selectVideoReader(str(Path(str(ch_featfilepath).replace('Results','RawVideos')).parent.joinpath('metadata.yaml')))
+            status, img = vid.read_frame(0)
+            img_shape = img.shape
+            plot_6wellplate(img, is_rotate180=rotate, ax=ax, line_thickness=10)
+        
         # plot worm trajectories
         plot_trajectory(ch_featfilepath,
                        ax=ax,
                        downsample=downsample,
                        legend=False,
                        rotate=rotate,
-                       img_shape=fovsplitter.img_shape)
+                       img_shape=img_shape)
 
         # set image position in figure
         ax.set_position(bbox)
@@ -238,8 +276,8 @@ def plot_plate_trajectories_from_filenames_summary(filenames_path, saveDir):
 if __name__ == "__main__":
     print("\nRunning: ", sys.argv[0])
 
-    example_featuresN = Path("/Volumes/behavgenom$/Saul/MicrobiomeScreen96WP/Results/20200222/microbiome_screen2_run7_p1_20200222_122858.22956805/metadata_featuresN.hdf5")
-
+    #example_featuresN = Path("/Volumes/behavgenom$/Saul/MicrobiomeScreen96WP/Results/20200222/microbiome_screen2_run7_p1_20200222_122858.22956805/metadata_featuresN.hdf5")
+    example_featuresN = Path('/Volumes/behavgenom$/John/data_exp_info/optimisation/condensation/Results/20240111/240111_avoidance_screen_condensation_run1_0000_20240111_161922.22956809/metadata_featuresN.hdf5')
     parser = argparse.ArgumentParser()
     # default to example file if none given
     parser.add_argument("--input", help="input file path (featuresN)",
@@ -255,6 +293,6 @@ if __name__ == "__main__":
     print("Input file:", args.input)
     print("Output directory:", args.output)
 
-    plot_plate_trajectories(args.input, saveDir=args.output, downsample=10)
+    plot_plate_trajectories(args.input, saveDir=args.output, downsample=10, fov=False)
 
 
