@@ -31,7 +31,6 @@ CH2PLATE_dict = {'Ch1':((0,0),True),
                  'Ch6':((1,2),False)}
 
 EXAMPLE_RAW_VIDEO_PATH = "/Volumes/hermes$/Saul/Keio_Screen/Data/Keio_Screen_Initial/RawVideos/20210406/keio_rep1_run1_bluelight_20210406_132006.22956809/000000.mp4"
-
 FRAME = 0
 DPI = 900
 
@@ -65,11 +64,9 @@ def get_video_set(videofilepath):
         
     return file_dict
     
-def plot_plate(videofilepath, save_path, frame=0, dpi=900): # frame = 'all'
+def plot_plate(video_dict, save_path, frame=0, dpi=900): # frame = 'all'
     """ Tile first frame of raw videos for plate to create a single plot of the full 96-well plate, 
         correcting for camera orientation """
-
-    file_dict = get_video_set(videofilepath)
     
     # define multi-panel figure
     columns = 3
@@ -88,8 +85,8 @@ def plot_plate(videofilepath, save_path, frame=0, dpi=900): # frame = 'all'
     fig, axs = plt.subplots(rows, columns, figsize=[x,y])
 
     errlog = []
-    print("Extracting frames...")
-    for channel, video_path in tqdm(file_dict.items()):
+    # print("Extracting frames...")
+    for channel, video_path in video_dict.items():
         
         _loc, rotate = CH2PLATE_dict[channel]
         _ri, _ci = _loc
@@ -128,12 +125,44 @@ def plot_plate(videofilepath, save_path, frame=0, dpi=900): # frame = 'all'
     
     if save_path:
         Path(save_path).parent.mkdir(exist_ok=True, parents=True)
-        fig.savefig(save_path,
-                    bbox_inches='tight',
-                    pad_inches=0,
-                    # transparent=True,
-                    dpi=dpi)
+        fig.savefig(save_path, bbox_inches='tight', pad_inches=0, dpi=dpi)
             
+    return
+
+def plot_plates_from_metadata(metadata, save_dir=None, dpi=DPI):
+    
+    # subset metadata for prestim videos only (to avoid duplicates for each plate)
+    prestim_videos = [i for i in metadata['imgstore_name'] if 'prestim' in i]
+    assert len(prestim_videos) > 0
+    metadata = metadata[metadata['imgstore_name'].isin(prestim_videos)]
+    
+    # get list of video filenames for each plate
+    grouped = metadata.groupby('imaging_plate_id')
+    plate_list = metadata['imaging_plate_id'].unique()
+
+    for i, plate in enumerate(tqdm(plate_list, initial=1)):
+        print('Plotting plate %d/%d: %s' % (i+1, len(plate_list), plate))
+        meta = grouped.get_group(plate)
+        
+        video_dict = get_video_set(Path(meta['filename'].iloc[0]) / '000000.mp4')
+        if not all(str(i) in sorted(meta['filename']) for i in 
+                   [str(i.parent) for i in video_dict.values()]):
+            print("WARNING! %d camera videos missing from metadata:" % (len(video_dict) - 
+                                                                       len(meta['filename'])))
+            # find symmetric difference (^) between both sets 
+            # (all elements that appear only in set a or in set b, but not both)
+            missing_vids = set([str(i.parent) for i in video_dict.values()]) ^ set(meta['filename'])
+            for i in missing_vids:
+                print(i)
+
+        # plot full plate view for each plate
+        save_dir = list(video_dict.values())[0].parent.parent if save_dir is None else save_dir
+        save_path = Path(save_dir) / 'plate_view' / 'plate_{}.png'.format(plate)
+        if not save_path.exists():
+            plot_plate(video_dict=video_dict, save_path=save_path, frame=0, dpi=dpi)
+        else:
+            print('File already exists. Skipping file.')
+    
     return
 
 #%% Main
@@ -147,13 +176,15 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--save_dir', help="Path to save directory", type=str, default=None)
     args = parser.parse_args()
     
-    RAW_VIDEO_PATH = Path(args.raw_video_path)
+    VIDEO_PATH = Path(args.raw_video_path)
     SAVE_DIR = None if args.save_dir is None else Path(args.save_dir)
+    SAVE_PATH = (VIDEO_PATH.parent if SAVE_DIR is None else SAVE_DIR) / (VIDEO_PATH.stem + '.jpg')
     
-    print("Plotting plate for %s" % str(RAW_VIDEO_PATH))
-    plot_plate(videofilepath=RAW_VIDEO_PATH, 
-               save_path=(RAW_VIDEO_PATH.parent if SAVE_DIR is None else SAVE_DIR) /\
-                   (RAW_VIDEO_PATH.stem + '.jpg'),
+    VIDEO_DICT = get_video_set(VIDEO_PATH)
+    
+    print("Plotting plate for %s" % str(VIDEO_PATH))
+    plot_plate(video_dict=VIDEO_DICT, 
+               save_path=SAVE_PATH,
                frame=FRAME,
                dpi=DPI)
         

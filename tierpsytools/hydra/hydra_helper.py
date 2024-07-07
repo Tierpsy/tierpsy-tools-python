@@ -26,14 +26,16 @@ def get_camera_serial(
             Day metadata dataframe including camera serial
 
     """
-    from tierpsytools.hydra import CAM2CH_df, UPRIGHT_96WP, UPRIGHT_6WP
+    from tierpsytools.hydra import CAM2CH_df, UPRIGHT_96WP, UPRIGHT_6WP, UPRIGHT_24WP
 
     if n_wells == 6:
         UPRIGHT_DF = UPRIGHT_6WP
     elif n_wells == 96:
         UPRIGHT_DF = UPRIGHT_96WP
+    elif n_wells == 24:
+        UPRIGHT_DF = UPRIGHT_24WP
     else:
-        raise ValueError('Only 96-well or 6-well plates are supported at the moment.')
+        raise ValueError('Only 96-well, 24-well or 6-well plates are supported at the moment.')
 
     channels = ['Ch{}'.format(i) for i in range(1,7,1)]
 
