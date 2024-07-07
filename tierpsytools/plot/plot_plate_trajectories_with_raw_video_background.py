@@ -18,15 +18,12 @@ trajectories throughout the video, for the entire 96-well plate (imaged under
 import cv2
 import sys
 import h5py
-import tqdm
 import argparse
 import pandas as pd
 from matplotlib import pyplot as plt
 from pathlib import Path
-
-from tierpsy.analysis.split_fov.FOVMultiWellsSplitter import FOVMultiWellsSplitter
-from tierpsy.analysis.split_fov.helper import CAM2CH_df, serial2channel, parse_camera_serial
-from tierpsy.analysis.compress.selectVideoReader import selectVideoReader
+from tqdm import tqdm
+from tierpsytools.hydra.hydra_filenames_helper import CAM2CH_df, serial2channel, parse_camera_serial
 
 #%% Channel-to-plate mapping dictionary (global)
 
@@ -136,6 +133,9 @@ def feat2raw(featfilepath):
 
 
 def get_frame_from_raw(rawvidname):
+    
+    from tierpsy.analysis.compress.selectVideoReader import selectVideoReader
+
     vid = selectVideoReader(str(rawvidname))
     status, frame = vid.read_frame(0)
     assert status == 1, f'Something went wrong while reading {rawvidname}'
@@ -176,6 +176,8 @@ def plot_6wellplate(img,is_rotate180=False, ax=None, line_thickness=20):
 def plot_plate_trajectories(featurefilepath, saveDir=None, downsample=10, fov= False):
     """ Tile plots and merge into a single plot for the
         entire 96-well plate, correcting for camera orientation. """
+
+    from tierpsy.analysis.split_fov.FOVMultiWellsSplitter import FOVMultiWellsSplitter
 
     file_dict = get_video_set(featurefilepath)
 
@@ -251,8 +253,10 @@ def plot_plate_trajectories_from_filenames_summary(filenames_path, saveDir):
     """ Plot plate trajectories for all files in Tierpsy filenames summaries
         'filenames_path', and save results to 'saveDir' """
 
+    from tierpsytools.read_data.hydra_metadata import _get_filename_column
+
     filenames_df = pd.read_csv(filenames_path, comment='#')
-    filenames_list = filenames_df[filenames_df['is_good']==True]['file_name']
+    filenames_list = filenames_df[filenames_df['is_good']==True][_get_filename_column(filenames_path)]
 
     filestem_list = []
     featurefile_list = []
@@ -282,17 +286,20 @@ if __name__ == "__main__":
     # default to example file if none given
     parser.add_argument("--input", help="input file path (featuresN)",
                         default=example_featuresN)
-    # default to input's grandparent if non given
+    # default to input's grandparent if none given
     known_args = parser.parse_known_args()
     parser.add_argument("--output", help="output directory path (for saving)",
                         default=Path(known_args[0].input).parent.parent)
-
     # parser.add_argument("--downsample", help="downsample trajectory data by plotting the worm centroid for every 'nth' frame",
     #                     default=10)
     args = parser.parse_args()
     print("Input file:", args.input)
     print("Output directory:", args.output)
 
+<<<<<<< HEAD
+    plot_plate_trajectories(args.input, saveDir=args.output, downsample=10)
+=======
     plot_plate_trajectories(args.input, saveDir=args.output, downsample=10, fov=False)
 
 
+>>>>>>> upstream/master

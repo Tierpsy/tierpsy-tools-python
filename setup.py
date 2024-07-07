@@ -12,7 +12,9 @@ setup(
                 + "tierpsytools.hydra.read_imgstore_extradata:" \
                 + "hydra_sensordata_report",
                 "platechecker=" \
-                + "tierpsytools.hydra.platechecker:platechecker"
+                + "tierpsytools.hydra.platechecker:platechecker",
+                "lawn_timelapse=" \
+                + "tierpsytools.hydra.lawn_timelapse:lawn_timelapse"
         ]
     },
 )
