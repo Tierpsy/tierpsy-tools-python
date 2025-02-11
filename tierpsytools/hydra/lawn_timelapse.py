@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Timelapse Hydra 96-well (RawVideos)
-- Make a timelapse video from the average frames of multiple short videos
+- Make a timelapse video from the first frames of multiple short videos
   eg. for investiagting lawn growth rate over time
 
 @author: sm5911
@@ -19,14 +19,14 @@ import numpy as np
 from tqdm import tqdm
 from pathlib import Path
 from matplotlib import pyplot as plt
-from tierpsy.analysis.split_fov.helper import serial2channel
-from tierpsy.analysis.compress.selectVideoReader import selectVideoReader
 from tierpsytools.hydra import CAM2CH_df
-from tierpsytools.hydra.hydra_filenames_helper import parse_camera_serial
+from tierpsytools.hydra.hydra_filenames_helper import parse_camera_serial, serial2channel
 from tierpsytools.plot.plot_plate_trajectories_with_raw_video_background import CH2PLATE_dict
+from tierpsytools.hydra.read_imgstore_extradata import ExtraDataReader
+from tierpsytools.hydra.platechecker import get_frame_from_raw
 
 #%% Functions
-                    
+
 def get_video_list(RAWVIDEO_DIR, EXP_DATES=None, video_list_save_path=None):
     """ Search directory for 'metadata.yaml' video files and return as a list """
     
@@ -49,33 +49,47 @@ def get_video_list(RAWVIDEO_DIR, EXP_DATES=None, video_list_save_path=None):
 
     return video_list
 
-def average_frame_yaml(metadata_yaml_path):
-    """ Return the average of the frames in a given 'metadata.yaml' video """
+def first_frame_yaml(metadata_yaml_path):
     
-    vid = selectVideoReader(str(metadata_yaml_path))
-    frames = vid.read()
-     
-    avg_frame = np.mean(frames, axis=0)
-        
-    return avg_frame
+    # get info from raw video
+    edr = ExtraDataReader(str(metadata_yaml_path))
+    
+    frame = get_frame_from_raw(edr)
+    
+    return frame
+
+# =============================================================================
+# def average_frame_yaml(metadata_yaml_path):
+#     """ Return the average of the frames in a given 'metadata.yaml' video """
+#     
+#     from tierpsy.analysis.compress.selectVideoReader import selectVideoReader
+# 
+#     vid = selectVideoReader(str(metadata_yaml_path))
+#     frames = vid.read()
+#      
+#     avg_frame = np.mean(frames, axis=0)
+#         
+#     return avg_frame
+# =============================================================================
 
 def save_avg_frames_for_timelapse(video_list, SAVE_DIR):
-    """ Take the average frame from each video and save to file """
+    """ Take the first frame from each video and save to file """
     
     video2frame_dict = {}
 
-    print('\nSaving average frame in %d videos...' % len(video_list))
+    print('\nSaving first frame in %d videos...' % len(video_list))
     for i, metadata_yaml_path in tqdm(enumerate(video_list)):
         
         metadata_yaml_path = Path(metadata_yaml_path)
         fstem = metadata_yaml_path.parent.name
         fname = fstem.replace('.','_') + '.tif'
         
-        savepath = Path(SAVE_DIR) / "average_frames" / fname
-        savepath.parent.mkdir(exist_ok=True)
+        savepath = Path(SAVE_DIR) / "first_frames" / fname
+        savepath.parent.mkdir(exist_ok=True, parents=True)
         
-        if not savepath.exists():         
-            avg_frame = average_frame_yaml(metadata_yaml_path) 
+        if not savepath.exists():    
+            
+            avg_frame = first_frame_yaml(metadata_yaml_path) 
             cv2.imwrite(str(savepath), avg_frame)
         
         video2frame_dict[str(metadata_yaml_path)] = str(savepath)
@@ -190,6 +204,8 @@ def plate_frames_from_camera_frames(plate_frame_filename_dict, video2frame_dict,
         file_dict = get_rig_video_set(rig_video_set[0]) # gives channels as well 
         assert sorted(file_dict.values()) == sorted([Path(i) for i in rig_video_set])
                 
+        # TODO: Use trajectory plotting function here
+        
         # define multi-panel figure
         columns = 3
         rows = 2
@@ -221,7 +237,7 @@ def plate_frames_from_camera_frames(plate_frame_filename_dict, video2frame_dict,
             # get location of subplot for camera
             ax = axs[_loc]       
             
-            # read average frame for rawvideopath
+            # read frame for rawvideopath
             av_frame_path = video2frame_dict[str(rawvideopath)]
             img = cv2.imread(av_frame_path)
             
@@ -265,19 +281,17 @@ def make_video_from_frames(images_dir, video_name, plate_frame_filename_dict, fp
     
     outpath_video = Path(images_dir) / "{}.mp4".format(video_name)
     
+    
     print('Creating timelapse video...')
     video = cv2.VideoWriter(str(outpath_video), cv2.VideoWriter_fourcc(*'XVID'), fps, (width,height))
     for imPath in tqdm(image_path_list):
+        # TODO: Create full plate view here when saving
         video.write(cv2.imread(str(imPath))) 
     cv2.destroyAllWindows()
     video.release()
     
-    # video = moviepy.video.io.ImageSequenceClip.ImageSequenceClip(image_list, fps=fps)
-    # video.write_videofile(outpath_video)    
     
-#%% Main
-
-if __name__ == "__main__":
+def lawn_timelapse():
     parser = argparse.ArgumentParser(description='Create timelapse video from a series of RawVideos')
     parser.add_argument('--rawvideo_dir', help='Path to RawVideo directory', type=str, default=None)   
     parser.add_argument('--video_list_path', help='Optional path to text file containing list of \
@@ -317,13 +331,13 @@ if __name__ == "__main__":
         
     print("%d videos found." % len(video_list))
    
-    # save average frames for timelapse
+    # save camera frames for timelapse
     video2frame_dict = save_avg_frames_for_timelapse(video_list, args.save_dir)
         
     plate_frame_filename_dict = match_plate_frame_filenames(raw_video_path_list=video_list, 
                                                             join_across_days=args.join_days)
     
-    # create frames for timelapse (96-well)
+    # create plate frames for timelapse (96-well)
     plate_frames_from_camera_frames(plate_frame_filename_dict, video2frame_dict, args.save_dir)
 
     # create timelapse video
@@ -332,4 +346,12 @@ if __name__ == "__main__":
                            video_name=args.name, 
                            plate_frame_filename_dict=plate_frame_filename_dict, 
                            fps=args.fps)
+    
+# TODO: Could check for no errors, then clean up the unneeded files
+# TODO: File timestamp in top right of video
+    
+#%% Main
+
+if __name__ == "__main__":
+    lawn_timelapse()
     
