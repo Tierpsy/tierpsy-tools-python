@@ -198,7 +198,6 @@ def filter_nan_inf(feat, threshold, axis, verbose=True):
     import numpy as np
 
     sn = [(feat.shape[0], 'samples'), (feat.shape[1], 'features')]
-
     nanRatio = np.sum(np.logical_or(np.isnan(feat), np.isinf(feat)),
                       axis=axis) / np.size(feat, axis=axis)
     if axis==0:
